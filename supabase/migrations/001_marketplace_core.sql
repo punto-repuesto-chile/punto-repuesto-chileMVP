@@ -55,6 +55,17 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
+-- Backfill profiles for users created before this migration.
+insert into public.profiles (id, full_name)
+select
+  user_row.id,
+  coalesce(
+    nullif(btrim(user_row.raw_user_meta_data ->> 'full_name'), ''),
+    ''
+  )
+from auth.users as user_row
+on conflict (id) do nothing;
+
 drop trigger if exists profiles_set_updated_at on public.profiles;
 create trigger profiles_set_updated_at
   before update on public.profiles
@@ -162,6 +173,9 @@ create unique index if not exists listing_images_one_primary_per_listing_idx
   on public.listing_images (listing_id)
   where is_primary;
 
+create unique index if not exists listing_images_unique_position_per_listing_idx
+  on public.listing_images (listing_id, position);
+
 -- -----------------------------------------------------------------------------
 -- Query indexes
 -- -----------------------------------------------------------------------------
@@ -180,8 +194,6 @@ create index if not exists listings_created_at_idx
   on public.listings (created_at desc);
 create index if not exists listings_vehicle_brand_model_idx
   on public.listings (vehicle_brand, vehicle_model);
-create index if not exists listing_images_listing_id_position_idx
-  on public.listing_images (listing_id, position);
 
 -- -----------------------------------------------------------------------------
 -- Row Level Security and API privileges
@@ -191,9 +203,9 @@ alter table public.profiles enable row level security;
 alter table public.listings enable row level security;
 alter table public.listing_images enable row level security;
 
-revoke all on table public.profiles from anon, authenticated;
-revoke all on table public.listings from anon, authenticated;
-revoke all on table public.listing_images from anon, authenticated;
+revoke all on table public.profiles from public, anon, authenticated;
+revoke all on table public.listings from public, anon, authenticated;
+revoke all on table public.listing_images from public, anon, authenticated;
 
 grant select, update on table public.profiles to authenticated;
 grant select on table public.listings to anon, authenticated;
