@@ -13,3 +13,5 @@ logs/
 .tmp-*
 .env.local
 .env.*.local
+#Supabase CLI local files
+.supabase/.temp/
