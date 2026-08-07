@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom"
 import type {
   MyListing,
-  OwnedListingStatusUpdate,
+  OwnedListingAction,
 } from "../../services/listingService"
 import ListingStatusBadge from "./ListingStatusBadge"
 
@@ -24,7 +24,7 @@ export default function MyListingCard({
 }: {
   listing: MyListing
   isUpdating: boolean
-  onRequestAction: (listingId: string, status: OwnedListingStatusUpdate) => void
+  onRequestAction: (listingId: string, action: OwnedListingAction) => void
 }) {
   return (
     <article
@@ -164,6 +164,16 @@ export default function MyListingCard({
                     Marcar como vendida
                   </button>
                 )}
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onRequestAction(listing.id, "delete")
+                  }}
+                  className="cursor-pointer rounded-lg border border-red-300 px-4 py-2 text-xs font-bold text-red-700 transition hover:bg-red-50"
+                >
+                  Eliminar publicación
+                </button>
               </>
             )}
           </div>

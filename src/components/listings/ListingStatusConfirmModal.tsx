@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react"
 import { createPortal } from "react-dom"
-import type { OwnedListingStatusUpdate } from "../../services/listingService"
+import type { OwnedListingAction } from "../../services/listingService"
 
-const CONTENT: Record<OwnedListingStatusUpdate, {
+const CONTENT: Record<OwnedListingAction, {
   title: string
   description: string
   confirmLabel: string
@@ -23,6 +23,12 @@ const CONTENT: Record<OwnedListingStatusUpdate, {
     description: "La publicación dejará de estar disponible públicamente.",
     confirmLabel: "Marcar como vendida",
   },
+  delete: {
+    title: "¿Eliminar esta publicación?",
+    description:
+      "Esta acción eliminará permanentemente la publicación y sus imágenes. No podrás recuperarla.",
+    confirmLabel: "Eliminar publicación",
+  },
 }
 
 export default function ListingStatusConfirmModal({
@@ -32,7 +38,7 @@ export default function ListingStatusConfirmModal({
   onCancel,
   onConfirm,
 }: {
-  targetStatus: OwnedListingStatusUpdate
+  targetStatus: OwnedListingAction
   isSubmitting: boolean
   error?: string | null
   onCancel: () => void
@@ -70,7 +76,13 @@ export default function ListingStatusConfirmModal({
         aria-describedby="status-confirm-description"
         className="w-full max-w-md rounded-2xl border border-white/60 bg-white p-6 shadow-2xl sm:p-7"
       >
-        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-orange/10 text-orange-dark">
+        <div
+          className={`flex h-11 w-11 items-center justify-center rounded-full ${
+            targetStatus === "delete"
+              ? "bg-red-100 text-red-700"
+              : "bg-orange/10 text-orange-dark"
+          }`}
+        >
           <span aria-hidden="true" className="text-xl font-extrabold">
             !
           </span>
@@ -106,9 +118,17 @@ export default function ListingStatusConfirmModal({
             type="button"
             disabled={isSubmitting}
             onClick={onConfirm}
-            className="rounded-xl bg-orange px-4 py-2.5 text-sm font-bold text-white transition hover:bg-orange-dark disabled:cursor-wait disabled:opacity-60"
+            className={`rounded-xl px-4 py-2.5 text-sm font-bold text-white transition disabled:cursor-wait disabled:opacity-60 ${
+              targetStatus === "delete"
+                ? "bg-red-600 hover:bg-red-700"
+                : "bg-orange hover:bg-orange-dark"
+            }`}
           >
-            {isSubmitting ? "Actualizando..." : content.confirmLabel}
+            {isSubmitting
+              ? targetStatus === "delete"
+                ? "Eliminando..."
+                : "Actualizando..."
+              : content.confirmLabel}
           </button>
         </div>
       </div>

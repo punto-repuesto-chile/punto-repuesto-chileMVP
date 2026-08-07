@@ -19,6 +19,11 @@ type DeliveryMethod = "pickup" | "shipping" | "delivery_agreement"
 
 export type ListingStatus = "draft" | "published" | "paused" | "sold"
 export type OwnedListingStatusUpdate = "published" | "paused" | "sold"
+export type OwnedListingAction = OwnedListingStatusUpdate | "delete"
+
+export type DeleteOwnedListingResult = {
+  storageCleanupFailed: boolean
+}
 
 export type MyListing = {
   id: string
@@ -315,6 +320,112 @@ export async function updateOwnedListingStatus(
       ? getListingImagePublicUrl(primaryImage.storage_path)
       : null,
   }
+}
+
+type OwnedListingForDeletionRow = {
+  id: string
+  status: ListingStatus
+  listing_images: { storage_path: string }[] | null
+}
+
+export async function deleteOwnedListing(
+  listingId: string,
+): Promise<DeleteOwnedListingResult> {
+  if (!UUID_PATTERN.test(listingId))
+    throw new ListingPublicationError("La publicación no es válida.")
+
+  const { data: authData, error: authError } = await supabase.auth.getUser()
+  if (authError || !authData.user)
+    throw new ListingPublicationError(
+      "Tu sesión no está disponible. Inicia sesión nuevamente.",
+      authError,
+    )
+
+  const userId = authData.user.id
+  const { data: listingData, error: listingError } = await supabase
+    .from("listings")
+    .select("id,status,listing_images(storage_path)")
+    .eq("id", listingId)
+    .eq("seller_id", userId)
+    .maybeSingle()
+
+  if (listingError)
+    throw new ListingPublicationError(
+      "No pudimos preparar la eliminación. Inténtalo nuevamente.",
+      listingError,
+    )
+  if (!listingData)
+    throw new ListingPublicationError(
+      "La publicación no existe o no pertenece a tu cuenta.",
+    )
+
+  const listing = listingData as unknown as OwnedListingForDeletionRow
+  const storagePaths = (listing.listing_images ?? []).map(
+    (image) => image.storage_path,
+  )
+  const wasPublished = listing.status === "published"
+
+  if (wasPublished) {
+    const { data: pausedListing, error: pauseError } = await supabase
+      .from("listings")
+      .update({ status: "paused" })
+      .eq("id", listingId)
+      .eq("seller_id", userId)
+      .eq("status", "published")
+      .select("id")
+      .maybeSingle()
+
+    if (pauseError || !pausedListing)
+      throw new ListingPublicationError(
+        "No pudimos ocultar la publicación antes de eliminarla. No se eliminó nada.",
+        pauseError,
+      )
+  }
+
+  const { data: deletedListing, error: deleteError } = await supabase
+    .from("listings")
+    .delete()
+    .eq("id", listingId)
+    .eq("seller_id", userId)
+    .select("id")
+    .maybeSingle()
+
+  if (deleteError || !deletedListing) {
+    if (wasPublished) {
+      const { error: restoreError } = await supabase
+        .from("listings")
+        .update({ status: "published" })
+        .eq("id", listingId)
+        .eq("seller_id", userId)
+        .eq("status", "paused")
+      if (restoreError && import.meta.env.DEV)
+        console.warn("No se pudo restaurar el estado de la publicación:", {
+          code: restoreError.code,
+          message: restoreError.message,
+        })
+    }
+    throw new ListingPublicationError(
+      "No pudimos eliminar la publicación. Inténtalo nuevamente.",
+      deleteError,
+    )
+  }
+
+  if (storagePaths.length === 0) return { storageCleanupFailed: false }
+
+  const { error: storageError } = await supabase.storage
+    .from(LISTING_IMAGES_BUCKET)
+    .remove(storagePaths)
+  if (storageError) {
+    if (import.meta.env.DEV)
+      console.error("La publicación se eliminó, pero falló Storage:", {
+        code: storageError.name,
+        message: storageError.message,
+        storagePaths,
+      })
+    return { storageCleanupFailed: true }
+  }
+
+  return { storageCleanupFailed: false }
 }
 
 const UUID_PATTERN =

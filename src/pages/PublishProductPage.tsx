@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import PublicationFormFields from "../components/publish/PublicationFormFields"
 import PublishHeader from "../components/publish/PublishHeader"
 import {
@@ -23,6 +23,7 @@ import {
 const DRAFT_KEY = "punto-repuesto-publication-draft"
 
 export default function PublishProductPage() {
+  const navigate = useNavigate()
   const [data, setData] = useState<PublicationFormData>(
     INITIAL_PUBLICATION_DATA,
   )
@@ -31,7 +32,6 @@ export default function PublishProductPage() {
   const submissionLockRef = useRef(false)
   const [errors, setErrors] = useState<PublicationErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [createdListingId, setCreatedListingId] = useState<string | null>(null)
   const [notice, setNotice] = useState<{
     type: "draft" | "success" | "error"
     message: string
@@ -144,13 +144,9 @@ export default function PublishProductPage() {
     setNotice(null)
     try {
       const result = await createPublication(data, images)
-      setCreatedListingId(result.listingId)
-      setNotice({
-        type: "success",
-        message: "Tu publicación fue creada correctamente.",
-      })
       localStorage.removeItem(DRAFT_KEY)
-      window.scrollTo({ top: 0, behavior: "smooth" })
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" })
+      navigate(`/publicacion/${result.listingId}`, { replace: true })
     } catch (error) {
       setNotice({
         type: "error",
@@ -202,12 +198,6 @@ export default function PublishProductPage() {
           >
             {notice.message}
           </div>
-        )}
-
-        {createdListingId && notice?.type === "success" && (
-          <p className="-mt-3 mb-6 text-xs text-muted">
-            ID de publicación: {createdListingId}
-          </p>
         )}
 
         <form noValidate onSubmit={submit} className="space-y-6">

@@ -8,11 +8,13 @@ import MyListingsFilters, {
 } from "../components/listings/MyListingsFilters"
 import MyListingsSkeleton from "../components/listings/MyListingsSkeleton"
 import {
+  deleteOwnedListing,
   getMyListings,
   ListingPublicationError,
   updateOwnedListingStatus,
   type ListingStatus,
   type MyListing,
+  type OwnedListingAction,
   type OwnedListingStatusUpdate,
 } from "../services/listingService"
 
@@ -20,7 +22,7 @@ const STATUSES: ListingStatus[] = ["published", "draft", "paused", "sold"]
 
 type PendingAction = {
   listingId: string
-  action: OwnedListingStatusUpdate
+  action: OwnedListingAction
 }
 
 export default function MyListingsPage() {
@@ -29,6 +31,7 @@ export default function MyListingsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [actionNotice, setActionNotice] = useState<string | null>(null)
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
   const actionLockRef = useRef(false)
   const [updatingListingIds, setUpdatingListingIds] = useState<Set<string>>(
@@ -117,10 +120,7 @@ export default function MyListingsPage() {
     }
   }
 
-  const requestAction = (
-    listingId: string,
-    action: OwnedListingStatusUpdate,
-  ) => {
+  const requestAction = (listingId: string, action: OwnedListingAction) => {
     setActionError(null)
     setPendingAction({ listingId, action })
   }
@@ -129,6 +129,37 @@ export default function MyListingsPage() {
     if (!pendingAction || actionLockRef.current) return
     actionLockRef.current = true
     try {
+      if (pendingAction.action === "delete") {
+        setUpdatingListingIds((current) =>
+          new Set(current).add(pendingAction.listingId),
+        )
+        setActionError(null)
+        try {
+          const result = await deleteOwnedListing(pendingAction.listingId)
+          setListings((current) =>
+            current.filter((listing) => listing.id !== pendingAction.listingId),
+          )
+          setActionNotice(
+            result.storageCleanupFailed
+              ? "La publicación fue eliminada, pero quedaron archivos pendientes de limpieza."
+              : "Publicación eliminada correctamente.",
+          )
+          setPendingAction(null)
+        } catch (requestError) {
+          setActionError(
+            requestError instanceof ListingPublicationError
+              ? requestError.message
+              : "No pudimos eliminar la publicación. Inténtalo nuevamente.",
+          )
+        } finally {
+          setUpdatingListingIds((current) => {
+            const next = new Set(current)
+            next.delete(pendingAction.listingId)
+            return next
+          })
+        }
+        return
+      }
       const succeeded = await changeListingStatus(
         pendingAction.listingId,
         pendingAction.action,
@@ -174,6 +205,22 @@ export default function MyListingsPage() {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
+        {actionNotice && (
+          <div
+            role="status"
+            className="mb-6 flex items-start justify-between gap-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-800"
+          >
+            <span>{actionNotice}</span>
+            <button
+              type="button"
+              onClick={() => setActionNotice(null)}
+              className="shrink-0 font-bold"
+              aria-label="Cerrar mensaje"
+            >
+              ×
+            </button>
+          </div>
+        )}
         <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-sm font-bold uppercase tracking-wider text-orange">
