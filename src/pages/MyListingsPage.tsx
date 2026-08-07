@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Link } from "react-router-dom"
+import ListingStatusConfirmModal from "../components/listings/ListingStatusConfirmModal"
 import MyListingCard from "../components/listings/MyListingCard"
 import MyListingsEmptyState from "../components/listings/MyListingsEmptyState"
 import MyListingsFilters, {
@@ -8,17 +9,31 @@ import MyListingsFilters, {
 import MyListingsSkeleton from "../components/listings/MyListingsSkeleton"
 import {
   getMyListings,
+  ListingPublicationError,
+  updateOwnedListingStatus,
   type ListingStatus,
   type MyListing,
+  type OwnedListingStatusUpdate,
 } from "../services/listingService"
 
 const STATUSES: ListingStatus[] = ["published", "draft", "paused", "sold"]
+
+type PendingAction = {
+  listingId: string
+  action: OwnedListingStatusUpdate
+}
 
 export default function MyListingsPage() {
   const [listings, setListings] = useState<MyListing[]>([])
   const [activeFilter, setActiveFilter] = useState<ListingsFilter>("all")
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
+  const actionLockRef = useRef(false)
+  const [updatingListingIds, setUpdatingListingIds] = useState<Set<string>>(
+    () => new Set(),
+  )
   const [requestNumber, setRequestNumber] = useState(0)
 
   useEffect(() => {
@@ -70,6 +85,68 @@ export default function MyListingsPage() {
         : listings.filter((listing) => listing.status === activeFilter),
     [activeFilter, listings],
   )
+
+  const changeListingStatus = async (
+    listingId: string,
+    status: OwnedListingStatusUpdate,
+  ): Promise<boolean> => {
+    if (updatingListingIds.has(listingId)) return false
+    setUpdatingListingIds((current) => new Set(current).add(listingId))
+    setActionError(null)
+    try {
+      const updatedListing = await updateOwnedListingStatus(listingId, status)
+      setListings((current) =>
+        current.map((listing) =>
+          listing.id === listingId ? updatedListing : listing,
+        ),
+      )
+      return true
+    } catch (requestError) {
+      setActionError(
+        requestError instanceof ListingPublicationError
+          ? requestError.message
+          : "No pudimos actualizar la publicación. Inténtalo nuevamente.",
+      )
+      return false
+    } finally {
+      setUpdatingListingIds((current) => {
+        const next = new Set(current)
+        next.delete(listingId)
+        return next
+      })
+    }
+  }
+
+  const requestAction = (
+    listingId: string,
+    action: OwnedListingStatusUpdate,
+  ) => {
+    setActionError(null)
+    setPendingAction({ listingId, action })
+  }
+
+  const confirmPendingAction = async () => {
+    if (!pendingAction || actionLockRef.current) return
+    actionLockRef.current = true
+    try {
+      const succeeded = await changeListingStatus(
+        pendingAction.listingId,
+        pendingAction.action,
+      )
+      if (succeeded) setPendingAction(null)
+    } finally {
+      actionLockRef.current = false
+    }
+  }
+
+  const cancelPendingAction = () => {
+    if (
+      pendingAction &&
+      !updatingListingIds.has(pendingAction.listingId) &&
+      !actionLockRef.current
+    )
+      setPendingAction(null)
+  }
 
   return (
     <div className="min-h-screen bg-bg text-petrol-dark">
@@ -141,6 +218,22 @@ export default function MyListingsPage() {
           <MyListingsEmptyState />
         ) : (
           <>
+            {actionError && (
+              <div
+                role="alert"
+                className="mb-6 flex items-start justify-between gap-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700"
+              >
+                <span>{actionError}</span>
+                <button
+                  type="button"
+                  onClick={() => setActionError(null)}
+                  className="shrink-0 font-bold"
+                  aria-label="Cerrar mensaje"
+                >
+                  ×
+                </button>
+              </div>
+            )}
             <div className="mb-6">
               <MyListingsFilters
                 activeFilter={activeFilter}
@@ -153,13 +246,27 @@ export default function MyListingsPage() {
             ) : (
               <div className="space-y-4">
                 {filteredListings.map((listing) => (
-                  <MyListingCard key={listing.id} listing={listing} />
+                  <MyListingCard
+                    key={listing.id}
+                    listing={listing}
+                    isUpdating={updatingListingIds.has(listing.id)}
+                    onRequestAction={requestAction}
+                  />
                 ))}
               </div>
             )}
           </>
         )}
       </main>
+      {pendingAction && (
+        <ListingStatusConfirmModal
+          targetStatus={pendingAction.action}
+          isSubmitting={updatingListingIds.has(pendingAction.listingId)}
+          error={actionError}
+          onCancel={cancelPendingAction}
+          onConfirm={() => void confirmPendingAction()}
+        />
+      )}
     </div>
   )
 }

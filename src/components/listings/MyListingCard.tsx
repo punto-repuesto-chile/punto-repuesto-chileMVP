@@ -1,6 +1,9 @@
 import { Link } from "react-router-dom"
+import type {
+  MyListing,
+  OwnedListingStatusUpdate,
+} from "../../services/listingService"
 import ListingStatusBadge from "./ListingStatusBadge"
-import type { MyListing } from "../../services/listingService"
 
 const PRICE_FORMATTER = new Intl.NumberFormat("es-CL", {
   style: "currency",
@@ -14,12 +17,27 @@ const DATE_FORMATTER = new Intl.DateTimeFormat("es-CL", {
   year: "numeric",
 })
 
-export default function MyListingCard({ listing }: { listing: MyListing }) {
+export default function MyListingCard({
+  listing,
+  isUpdating,
+  onRequestAction,
+}: {
+  listing: MyListing
+  isUpdating: boolean
+  onRequestAction: (listingId: string, status: OwnedListingStatusUpdate) => void
+}) {
   return (
-    <article className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+    <article
+      className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+      aria-busy={isUpdating}
+    >
       <div className="grid sm:grid-cols-[220px_1fr]">
         <Link
-          to={`/publicacion/${listing.id}`}
+          to={
+            listing.status === "published"
+              ? `/publicacion/${listing.id}`
+              : `/publicacion/${listing.id}/editar`
+          }
           className="relative min-h-48 bg-slate-100 sm:min-h-full"
           aria-label={`Ver publicación ${listing.title}`}
         >
@@ -59,12 +77,7 @@ export default function MyListingCard({ listing }: { listing: MyListing }) {
                 {listing.category}
               </p>
               <h2 className="mt-1 truncate font-display text-xl font-extrabold text-petrol-dark">
-                <Link
-                  to={`/publicacion/${listing.id}`}
-                  className="hover:text-orange"
-                >
-                  {listing.title}
-                </Link>
+                {listing.title}
               </h2>
             </div>
             <p className="font-display text-xl font-extrabold text-petrol">
@@ -94,18 +107,65 @@ export default function MyListingCard({ listing }: { listing: MyListing }) {
           </dl>
 
           <div className="mt-6 flex flex-wrap gap-2 border-t border-border pt-4">
-            <Link
-              to={`/publicacion/${listing.id}`}
-              className="rounded-lg bg-petrol px-4 py-2 text-xs font-bold text-white transition hover:bg-petrol-dark"
-            >
-              Ver publicación
-            </Link>
-            <Link
-              to={`/publicacion/${listing.id}/editar`}
-              className="rounded-lg border border-petrol px-4 py-2 text-xs font-bold text-petrol transition hover:bg-petrol/5"
-            >
-              Editar
-            </Link>
+            {isUpdating ? (
+              <span className="rounded-lg bg-petrol/10 px-4 py-2 text-xs font-bold text-petrol">
+                Actualizando...
+              </span>
+            ) : (
+              <>
+                {listing.status === "published" && (
+                  <Link
+                    to={`/publicacion/${listing.id}`}
+                    className="rounded-lg bg-petrol px-4 py-2 text-xs font-bold text-white transition hover:bg-petrol-dark"
+                  >
+                    Ver publicación
+                  </Link>
+                )}
+                <Link
+                  to={`/publicacion/${listing.id}/editar`}
+                  className="cursor-pointer rounded-lg border border-petrol px-4 py-2 text-xs font-bold text-petrol transition hover:bg-petrol/5"
+                >
+                  {listing.status === "sold" ? "Ver información" : "Editar"}
+                </Link>
+                {listing.status === "published" && (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onRequestAction(listing.id, "paused")
+                    }}
+                    className="cursor-pointer rounded-lg border border-amber-300 px-4 py-2 text-xs font-bold text-amber-700 transition hover:bg-amber-50"
+                  >
+                    Pausar publicación
+                  </button>
+                )}
+                {listing.status === "paused" && (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onRequestAction(listing.id, "published")
+                    }}
+                    className="cursor-pointer rounded-lg border border-emerald-300 px-4 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-50"
+                  >
+                    Volver a publicar
+                  </button>
+                )}
+                {(listing.status === "published" ||
+                  listing.status === "paused") && (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onRequestAction(listing.id, "sold")
+                    }}
+                    className="cursor-pointer rounded-lg border border-blue-300 px-4 py-2 text-xs font-bold text-blue-700 transition hover:bg-blue-50"
+                  >
+                    Marcar como vendida
+                  </button>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>

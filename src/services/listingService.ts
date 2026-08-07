@@ -18,6 +18,7 @@ const IMAGE_EXTENSIONS: Record<string, string> = {
 type DeliveryMethod = "pickup" | "shipping" | "delivery_agreement"
 
 export type ListingStatus = "draft" | "published" | "paused" | "sold"
+export type OwnedListingStatusUpdate = "published" | "paused" | "sold"
 
 export type MyListing = {
   id: string
@@ -247,6 +248,73 @@ export async function getMyListings(): Promise<MyListing[]> {
         : null,
     }
   })
+}
+
+const ALLOWED_SOURCE_STATUSES: Record<OwnedListingStatusUpdate, ListingStatus[]> =
+  {
+    paused: ["published"],
+    published: ["paused"],
+    sold: ["published", "paused"],
+  }
+
+export async function updateOwnedListingStatus(
+  listingId: string,
+  status: OwnedListingStatusUpdate,
+): Promise<MyListing> {
+  if (!UUID_PATTERN.test(listingId))
+    throw new ListingPublicationError("La publicación no es válida.")
+
+  const { data: authData, error: authError } = await supabase.auth.getUser()
+  if (authError || !authData.user)
+    throw new ListingPublicationError(
+      "Tu sesión no está disponible. Inicia sesión nuevamente.",
+      authError,
+    )
+
+  const { data, error } = await supabase
+    .from("listings")
+    .update({ status })
+    .eq("id", listingId)
+    .eq("seller_id", authData.user.id)
+    .in("status", ALLOWED_SOURCE_STATUSES[status])
+    .select(
+      "id,title,price,category,status,stock,region,commune,created_at,listing_images(storage_path,is_primary)",
+    )
+    .eq("listing_images.is_primary", true)
+    .maybeSingle()
+
+  if (error) {
+    if (import.meta.env.DEV)
+      console.error("No se pudo actualizar el estado:", {
+        code: error.code,
+        message: error.message,
+      })
+    throw new ListingPublicationError(
+      "No pudimos actualizar la publicación. Inténtalo nuevamente.",
+      error,
+    )
+  }
+  if (!data)
+    throw new ListingPublicationError(
+      "La publicación no pertenece a tu cuenta o ese cambio de estado no está permitido.",
+    )
+
+  const row = data as unknown as MyListingRow
+  const primaryImage = row.listing_images?.find((image) => image.is_primary)
+  return {
+    id: row.id,
+    title: row.title,
+    price: Number(row.price),
+    category: row.category,
+    status: row.status,
+    stock: row.stock,
+    region: row.region,
+    commune: row.commune,
+    createdAt: row.created_at,
+    primaryImageUrl: primaryImage
+      ? getListingImagePublicUrl(primaryImage.storage_path)
+      : null,
+  }
 }
 
 const UUID_PATTERN =
