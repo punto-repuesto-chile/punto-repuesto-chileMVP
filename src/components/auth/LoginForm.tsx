@@ -9,7 +9,7 @@ type FormErrors = {
 }
 type LocationState = {
   from?: string
-  reason?: "publish"
+  reason?: "publish" | "my-listings" | "edit-listing"
 }
 
 export default function LoginForm() {
@@ -24,10 +24,15 @@ export default function LoginForm() {
     type: "info" | "error" | "success"
     text: string
   } | null>(
-    state?.reason === "publish"
+    state?.reason
       ? {
           type: "info",
-          text: "Inicia sesión para publicar un producto. Después volverás automáticamente al formulario.",
+          text:
+            state.reason === "edit-listing"
+              ? "Inicia sesión para editar esta publicación. Después volverás automáticamente al formulario."
+              : state.reason === "my-listings"
+                ? "Inicia sesión para revisar tus publicaciones. Después volverás automáticamente a esa página."
+                : "Inicia sesión para publicar un producto. Después volverás automáticamente al formulario.",
         }
       : null,
   )

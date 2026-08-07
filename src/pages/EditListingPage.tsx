@@ -1,18 +1,19 @@
 import { useEffect, useRef, useState, type FormEvent } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useNavigate, useParams } from "react-router-dom"
 import PublicationFormFields from "../components/publish/PublicationFormFields"
 import PublishHeader from "../components/publish/PublishHeader"
 import {
-  createPublication,
+  getOwnedListingById,
   ListingPublicationError,
+  updateOwnedListing,
+  type OwnedListingForEdit,
 } from "../services/listingService"
-import {
-  INITIAL_PUBLICATION_DATA,
-  type ProductImage,
-  type PublicationErrors,
-  type PublicationField,
-  type PublicationFormData,
-  type SetPublicationField,
+import type {
+  EditableProductImage,
+  PublicationErrors,
+  PublicationField,
+  PublicationFormData,
+  SetPublicationField,
 } from "../types/publication"
 import {
   ACCEPTED_IMAGE_TYPES,
@@ -20,55 +21,65 @@ import {
   validatePublication,
 } from "../utils/publicationForm"
 
-const DRAFT_KEY = "punto-repuesto-publication-draft"
-
-export default function PublishProductPage() {
+export default function EditListingPage() {
+  const { id = "" } = useParams()
   const navigate = useNavigate()
-  const [data, setData] = useState<PublicationFormData>(
-    INITIAL_PUBLICATION_DATA,
-  )
-  const [images, setImages] = useState<ProductImage[]>([])
-  const imagesRef = useRef<ProductImage[]>([])
+  const [original, setOriginal] = useState<OwnedListingForEdit | null>(null)
+  const [data, setData] = useState<PublicationFormData | null>(null)
+  const [images, setImages] = useState<EditableProductImage[]>([])
+  const imagesRef = useRef<EditableProductImage[]>([])
   const submissionLockRef = useRef(false)
+  const redirectTimerRef = useRef<number | null>(null)
   const [errors, setErrors] = useState<PublicationErrors>({})
+  const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [hasAccess, setHasAccess] = useState(true)
   const [notice, setNotice] = useState<{
-    type: "draft" | "success" | "error"
+    type: "success" | "error"
     message: string
   } | null>(null)
 
   useEffect(() => {
-    const draft = localStorage.getItem(DRAFT_KEY)
-    if (!draft) return
-    try {
-      setData({
-        ...INITIAL_PUBLICATION_DATA,
-        ...JSON.parse(draft) as Partial<PublicationFormData>,
+    let active = true
+    void getOwnedListingById(id)
+      .then((listing) => {
+        if (!active) return
+        if (!listing) {
+          setHasAccess(false)
+          return
+        }
+        setOriginal(listing)
+        setData(listing.formData)
+        setImages(listing.images)
       })
-      setNotice({
-        type: "draft",
-        message:
-          "Recuperamos automáticamente tu borrador. Las imágenes deben seleccionarse nuevamente por seguridad.",
+      .catch(() => {
+        if (active) setHasAccess(false)
       })
-    } catch {
-      localStorage.removeItem(DRAFT_KEY)
+      .finally(() => {
+        if (active) setIsLoading(false)
+      })
+    return () => {
+      active = false
     }
-  }, [])
+  }, [id])
 
   useEffect(() => {
     imagesRef.current = images
   }, [images])
 
   useEffect(
-    () => () =>
-      imagesRef.current.forEach((image) =>
-        URL.revokeObjectURL(image.previewUrl),
-      ),
+    () => () => {
+      imagesRef.current.forEach((image) => {
+        if (image.kind === "new") URL.revokeObjectURL(image.previewUrl)
+      })
+      if (redirectTimerRef.current !== null)
+        window.clearTimeout(redirectTimerRef.current)
+    },
     [],
   )
 
   const setField: SetPublicationField = (field, value) => {
-    setData((current) => ({ ...current, [field]: value }))
+    setData((current) => (current ? { ...current, [field]: value } : current))
     setErrors((current) => ({ ...current, [field]: undefined }))
   }
 
@@ -96,23 +107,14 @@ export default function PublishProductPage() {
       })
   }
 
-  const removeImage = (id: string) => {
+  const removeImage = (imageId: string) => {
     setImages((current) => {
-      const removed = current.find((image) => image.id === id)
-      if (removed) URL.revokeObjectURL(removed.previewUrl)
-      const remaining = current.filter((image) => image.id !== id)
+      const removed = current.find((image) => image.id === imageId)
+      if (removed?.kind === "new") URL.revokeObjectURL(removed.previewUrl)
+      const remaining = current.filter((image) => image.id !== imageId)
       if (removed?.isPrimary && remaining[0])
         remaining[0] = { ...remaining[0], isPrimary: true }
       return remaining
-    })
-  }
-
-  const saveDraft = () => {
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(data))
-    setNotice({
-      type: "draft",
-      message:
-        "Borrador guardado en este navegador. Las imágenes no se guardan.",
     })
   }
 
@@ -126,34 +128,41 @@ export default function PublishProductPage() {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
-    if (submissionLockRef.current) return
+    if (!data || !original || submissionLockRef.current) return
     const nextErrors = validatePublication(data, images)
     const invalidFields = Object.keys(nextErrors) as PublicationField[]
-    if (invalidFields.length) {
+    if (invalidFields.length > 0) {
       setErrors(nextErrors)
       setNotice({
         type: "error",
-        message: "Revisa los campos destacados antes de publicar.",
+        message: "Revisa los campos destacados antes de guardar.",
       })
       focusFirstError(invalidFields)
       return
     }
-    setErrors({})
+
     submissionLockRef.current = true
     setIsSubmitting(true)
+    setErrors({})
     setNotice(null)
     try {
-      const result = await createPublication(data, images)
-      localStorage.removeItem(DRAFT_KEY)
-      window.scrollTo({ top: 0, left: 0, behavior: "instant" })
-      navigate(`/publicacion/${result.listingId}`, { replace: true })
+      await updateOwnedListing(id, data, images, original)
+      setNotice({
+        type: "success",
+        message: "Los cambios se guardaron correctamente.",
+      })
+      window.scrollTo({ top: 0, behavior: "smooth" })
+      redirectTimerRef.current = window.setTimeout(
+        () => navigate(`/publicacion/${id}`, { replace: true }),
+        700,
+      )
     } catch (error) {
       setNotice({
         type: "error",
         message:
           error instanceof ListingPublicationError
             ? error.message
-            : "No pudimos crear la publicación. Inténtalo nuevamente.",
+            : "No pudimos guardar los cambios. Inténtalo nuevamente.",
       })
     } finally {
       submissionLockRef.current = false
@@ -161,39 +170,62 @@ export default function PublishProductPage() {
     }
   }
 
+  if (isLoading)
+    return (
+      <div className="min-h-screen bg-bg text-petrol-dark">
+        <PublishHeader label="Editando" />
+        <main className="mx-auto max-w-5xl animate-pulse px-4 py-12 sm:px-6">
+          <div className="h-8 w-64 rounded bg-slate-200" />
+          <div className="mt-8 h-72 rounded-2xl bg-slate-200" />
+        </main>
+      </div>
+    )
+
+  if (!hasAccess || !data || !original)
+    return (
+      <div className="min-h-screen bg-bg text-petrol-dark">
+        <PublishHeader label="Editando" />
+        <main className="mx-auto max-w-xl px-4 py-20 text-center sm:px-6">
+          <h1 className="font-display text-3xl font-extrabold">
+            No tienes acceso a esta publicación.
+          </h1>
+          <p className="mt-3 text-muted">
+            La publicación no existe o pertenece a otra cuenta.
+          </p>
+          <Link
+            to="/mis-publicaciones"
+            className="mt-7 inline-flex rounded-xl bg-petrol px-5 py-3 text-sm font-bold text-white"
+          >
+            Volver a mis publicaciones
+          </Link>
+        </main>
+      </div>
+    )
+
   return (
     <div className="min-h-screen bg-bg text-petrol-dark">
-      <PublishHeader />
+      <PublishHeader label="Editando" />
       <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
         <div className="mb-8">
           <p className="text-sm font-bold uppercase tracking-wider text-orange">
-            Nueva publicación
+            Gestión de publicación
           </p>
           <h1 className="mt-2 font-display text-3xl font-extrabold sm:text-4xl">
-            Publica tu repuesto
+            Editar publicación
           </h1>
-          <p className="mt-3 max-w-2xl text-muted">
-            Completa la información para que compradores de todo Chile
-            encuentren el producto correcto.
-          </p>
-          <div className="mt-5 h-2 overflow-hidden rounded-full bg-border">
-            <div className="h-full w-full rounded-full bg-gradient-to-r from-petrol to-orange" />
-          </div>
-          <p className="mt-2 text-xs text-muted">
-            Formulario único · Tus datos permanecen en este navegador hasta
-            publicar
+          <p className="mt-3 text-muted">
+            Actualiza la información de tu publicación.
           </p>
         </div>
 
         {notice && (
           <div
             role="status"
+            aria-live="polite"
             className={`mb-6 rounded-xl border p-4 text-sm font-medium ${
               notice.type === "success"
                 ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                : notice.type === "error"
-                  ? "border-red-200 bg-red-50 text-red-700"
-                  : "border-blue-200 bg-blue-50 text-blue-800"
+                : "border-red-200 bg-red-50 text-red-700"
             }`}
           >
             {notice.message}
@@ -208,37 +240,29 @@ export default function PublishProductPage() {
             setField={setField}
             addFiles={addFiles}
             removeImage={removeImage}
-            setPrimary={(id) =>
+            setPrimary={(imageId) =>
               setImages((current) =>
                 current.map((image) => ({
                   ...image,
-                  isPrimary: image.id === id,
+                  isPrimary: image.id === imageId,
                 })),
               )
             }
+            disableEmail
           />
           <div className="flex flex-col-reverse gap-3 rounded-2xl border border-border bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex gap-3">
-              <Link
-                to="/"
-                className="rounded-xl px-4 py-3 text-sm font-semibold text-muted hover:bg-bg"
-              >
-                Volver al inicio
-              </Link>
-              <button
-                type="button"
-                onClick={saveDraft}
-                className="rounded-xl border border-petrol px-4 py-3 text-sm font-bold text-petrol hover:bg-petrol/5"
-              >
-                Guardar borrador
-              </button>
-            </div>
+            <Link
+              to={`/publicacion/${id}`}
+              className="rounded-xl px-4 py-3 text-center text-sm font-semibold text-muted hover:bg-bg"
+            >
+              Cancelar
+            </Link>
             <button
               type="submit"
               disabled={isSubmitting}
               className="rounded-xl bg-orange px-7 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-orange-dark disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSubmitting ? "Publicando..." : "Publicar producto"}
+              {isSubmitting ? "Guardando..." : "Guardar cambios"}
             </button>
           </div>
         </form>

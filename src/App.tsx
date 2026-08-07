@@ -618,14 +618,14 @@ function Navbar() {
                     >
                       Mi perfil
                     </button>
-                    <button
-                      type="button"
+                    <Link
                       role="menuitem"
-                      onClick={() => showComingSoon("Mis publicaciones")}
-                      className="w-full rounded-lg px-3 py-2 text-left text-sm text-petrol-dark hover:bg-bg"
+                      to="/mis-publicaciones"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="block w-full rounded-lg px-3 py-2 text-left text-sm text-petrol-dark hover:bg-bg"
                     >
                       Mis publicaciones
-                    </button>
+                    </Link>
                     <Link
                       role="menuitem"
                       to="/publicar"
@@ -706,6 +706,13 @@ function Navbar() {
                 </p>
                 <p className="text-xs text-muted">{user.email}</p>
                 <div className="mt-3 grid grid-cols-2 gap-2">
+                  <Link
+                    to="/mis-publicaciones"
+                    onClick={() => setMobileOpen(false)}
+                    className="col-span-2 rounded-lg bg-white px-2 py-2 text-center text-xs font-semibold text-petrol"
+                  >
+                    Mis publicaciones
+                  </Link>
                   <button
                     type="button"
                     onClick={() => showComingSoon("Mi perfil")}

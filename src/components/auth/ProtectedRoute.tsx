@@ -17,11 +17,16 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
       </div>
     )
   if (!isAuthenticated) {
+    const reason = location.pathname.endsWith("/editar")
+      ? "edit-listing"
+      : location.pathname === "/mis-publicaciones"
+        ? "my-listings"
+        : "publish"
     return (
       <Navigate
         to="/login"
         replace
-        state={{ from: location.pathname, reason: "publish" }}
+        state={{ from: location.pathname, reason }}
       />
     )
   }

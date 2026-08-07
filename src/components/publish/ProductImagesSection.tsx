@@ -1,9 +1,12 @@
 import { useRef, useState, type DragEvent } from "react"
-import type { ProductImage, PublicationErrors } from "../../types/publication"
+import type {
+  PublicationErrors,
+  PublicationImagePreview,
+} from "../../types/publication"
 import FormSection, { FieldError } from "./FormSection"
 
 type Props = {
-  images: ProductImage[]
+  images: PublicationImagePreview[]
   error?: PublicationErrors["images"]
   addFiles: (files: File[]) => void
   removeImage: (id: string) => void
