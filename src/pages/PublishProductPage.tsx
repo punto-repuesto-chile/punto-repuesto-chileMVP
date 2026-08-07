@@ -8,6 +8,10 @@ import PublishHeader from "../components/publish/PublishHeader"
 import SellerContactSection from "../components/publish/SellerContactSection"
 import VehicleCompatibilitySection from "../components/publish/VehicleCompatibilitySection"
 import {
+  createPublication,
+  ListingPublicationError,
+} from "../services/listingService"
+import {
   INITIAL_PUBLICATION_DATA,
   type ProductImage,
   type PublicationErrors,
@@ -51,33 +55,16 @@ function validatePublication(
   return errors
 }
 
-// Punto de integración futuro: reemplazar este cuerpo por la llamada a la API real.
-async function submitPublicationToApi(
-  data: PublicationFormData,
-  images: ProductImage[],
-) {
-  const payload = {
-    ...data,
-    images: images.map(({ file, isPrimary }) => ({
-      name: file.name,
-      type: file.type,
-      size: file.size,
-      isPrimary,
-    })),
-  }
-  console.info("Publicación lista para enviar:", payload)
-  await new Promise((resolve) => setTimeout(resolve, 900))
-  return payload
-}
-
 export default function PublishProductPage() {
   const [data, setData] = useState<PublicationFormData>(
     INITIAL_PUBLICATION_DATA,
   )
   const [images, setImages] = useState<ProductImage[]>([])
   const imagesRef = useRef<ProductImage[]>([])
+  const submissionLockRef = useRef(false)
   const [errors, setErrors] = useState<PublicationErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [createdListingId, setCreatedListingId] = useState<string | null>(null)
   const [notice, setNotice] = useState<{
     type: "draft" | "success" | "error"
     message: string
@@ -171,6 +158,7 @@ export default function PublishProductPage() {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
+    if (submissionLockRef.current) return
     const nextErrors = validatePublication(data, images)
     const invalidFields = Object.keys(nextErrors) as PublicationField[]
     if (invalidFields.length) {
@@ -183,18 +171,28 @@ export default function PublishProductPage() {
       return
     }
     setErrors({})
+    submissionLockRef.current = true
     setIsSubmitting(true)
     setNotice(null)
     try {
-      await submitPublicationToApi(data, images)
+      const result = await createPublication(data, images)
+      setCreatedListingId(result.listingId)
       setNotice({
         type: "success",
-        message:
-          "¡Publicación validada con éxito! Está lista para conectarse al backend.",
+        message: "Tu publicación fue creada correctamente.",
       })
       localStorage.removeItem(DRAFT_KEY)
       window.scrollTo({ top: 0, behavior: "smooth" })
+    } catch (error) {
+      setNotice({
+        type: "error",
+        message:
+          error instanceof ListingPublicationError
+            ? error.message
+            : "No pudimos crear la publicación. Inténtalo nuevamente.",
+      })
     } finally {
+      submissionLockRef.current = false
       setIsSubmitting(false)
     }
   }
@@ -236,6 +234,12 @@ export default function PublishProductPage() {
           >
             {notice.message}
           </div>
+        )}
+
+        {createdListingId && notice?.type === "success" && (
+          <p className="-mt-3 mb-6 text-xs text-muted">
+            ID de publicación: {createdListingId}
+          </p>
         )}
 
         <form noValidate onSubmit={submit} className="space-y-6">
