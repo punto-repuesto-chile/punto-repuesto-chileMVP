@@ -9,12 +9,14 @@ type Props = {
   data: PublicationFormData
   errors: PublicationErrors
   setField: SetPublicationField
+  disableEmail?: boolean
 }
 
 export default function SellerContactSection({
   data,
   errors,
   setField,
+  disableEmail = false,
 }: Props) {
   return (
     <FormSection
@@ -57,6 +59,7 @@ export default function SellerContactSection({
             className={fieldClass}
             placeholder="nombre@correo.cl"
             autoComplete="email"
+            disabled={disableEmail}
           />
           <FieldError message={errors.email} />
         </label>

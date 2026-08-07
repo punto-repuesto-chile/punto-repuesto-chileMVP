@@ -1,5 +1,9 @@
 import { supabase } from "../lib/supabase"
 import type { ProductImage, PublicationFormData } from "../types/publication"
+import type {
+  EditableProductImage,
+  ExistingProductImage,
+} from "../types/publication"
 
 const LISTING_IMAGES_BUCKET = "listing-images"
 const MAX_IMAGE_COUNT = 8
@@ -12,6 +16,103 @@ const IMAGE_EXTENSIONS: Record<string, string> = {
 }
 
 type DeliveryMethod = "pickup" | "shipping" | "delivery_agreement"
+
+export type ListingStatus = "draft" | "published" | "paused" | "sold"
+
+export type MyListing = {
+  id: string
+  title: string
+  price: number
+  category: string
+  status: ListingStatus
+  stock: number
+  region: string
+  commune: string
+  createdAt: string
+  primaryImageUrl: string | null
+}
+
+export type ListingCondition = "new" | "used" | "refurbished"
+
+export type PublishedListingImage = {
+  id: string
+  url: string
+  position: number
+  isPrimary: boolean
+}
+
+export type PublishedListing = {
+  id: string
+  title: string
+  description: string
+  category: string
+  condition: ListingCondition
+  price: number
+  stock: number
+  vehicleBrand: string | null
+  vehicleModel: string | null
+  yearFrom: number | null
+  yearTo: number | null
+  engineVersion: string | null
+  oemCode: string | null
+  region: string
+  commune: string
+  deliveryMethods: DeliveryMethod[]
+  contactName: string
+  contactPhone: string
+  allowWhatsapp: boolean
+  createdAt: string
+  images: PublishedListingImage[]
+}
+
+type MyListingImageRow = {
+  storage_path: string
+  is_primary: boolean
+}
+
+type PublishedListingImageRow = {
+  id: string
+  storage_path: string
+  position: number
+  is_primary: boolean
+}
+
+type PublishedListingRow = {
+  id: string
+  title: string
+  description: string
+  category: string
+  condition: ListingCondition
+  price: number
+  stock: number
+  vehicle_brand: string | null
+  vehicle_model: string | null
+  year_from: number | null
+  year_to: number | null
+  engine_version: string | null
+  oem_code: string | null
+  region: string
+  commune: string
+  delivery_methods: DeliveryMethod[]
+  contact_name: string
+  contact_phone: string
+  allow_whatsapp: boolean
+  created_at: string
+  listing_images: PublishedListingImageRow[] | null
+}
+
+type MyListingRow = {
+  id: string
+  title: string
+  price: number
+  category: string
+  status: ListingStatus
+  stock: number
+  region: string
+  commune: string
+  created_at: string
+  listing_images: MyListingImageRow[] | null
+}
 
 export type CreateListingInput = {
   seller_id: string
@@ -45,7 +146,45 @@ export type UploadedListingImage = {
   is_primary: boolean
 }
 
+type NewUploadedListingImage = UploadedListingImage & { id: string }
+type PositionedNewImage = {
+  image: ProductImage
+  position: number
+}
+
 export type PublicationResult = { listingId: string }
+
+export type OwnedListingForEdit = {
+  id: string
+  status: ListingStatus
+  formData: PublicationFormData
+  images: ExistingProductImage[]
+}
+
+type OwnedListingRow = {
+  id: string
+  status: ListingStatus
+  title: string
+  description: string
+  category: string
+  condition: Exclude<PublicationFormData["condition"], "">
+  price: number
+  stock: number
+  vehicle_brand: string | null
+  vehicle_model: string | null
+  year_from: number | null
+  year_to: number | null
+  engine_version: string | null
+  oem_code: string | null
+  region: string
+  commune: string
+  delivery_methods: DeliveryMethod[]
+  contact_name: string
+  contact_phone: string
+  contact_email: string | null
+  allow_whatsapp: boolean
+  listing_images: PublishedListingImageRow[] | null
+}
 
 export class ListingPublicationError extends Error {
   readonly cause?: unknown
@@ -54,6 +193,181 @@ export class ListingPublicationError extends Error {
     super(message)
     this.name = "ListingPublicationError"
     this.cause = cause
+  }
+}
+
+export class ListingsQueryError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "ListingsQueryError"
+  }
+}
+
+export function getListingImagePublicUrl(storagePath: string): string {
+  return supabase.storage.from(LISTING_IMAGES_BUCKET).getPublicUrl(storagePath)
+    .data.publicUrl
+}
+
+export async function getMyListings(): Promise<MyListing[]> {
+  const { data: authData, error: authError } = await supabase.auth.getUser()
+  if (authError || !authData.user)
+    throw new ListingsQueryError(
+      "Tu sesión no está disponible. Inicia sesión nuevamente.",
+    )
+
+  const { data, error } = await supabase
+    .from("listings")
+    .select(
+      "id,title,price,category,status,stock,region,commune,created_at,listing_images(storage_path,is_primary)",
+    )
+    .eq("seller_id", authData.user.id)
+    .eq("listing_images.is_primary", true)
+    .order("created_at", { ascending: false })
+
+  if (error)
+    throw new ListingsQueryError(
+      "No pudimos cargar tus publicaciones en este momento.",
+    )
+
+  const rows = (data ?? []) as unknown as MyListingRow[]
+  return rows.map((row) => {
+    const primaryImage = row.listing_images?.find((image) => image.is_primary)
+    return {
+      id: row.id,
+      title: row.title,
+      price: Number(row.price),
+      category: row.category,
+      status: row.status,
+      stock: row.stock,
+      region: row.region,
+      commune: row.commune,
+      createdAt: row.created_at,
+      primaryImageUrl: primaryImage
+        ? getListingImagePublicUrl(primaryImage.storage_path)
+        : null,
+    }
+  })
+}
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+export async function getPublishedListingById(
+  listingId: string,
+): Promise<PublishedListing | null> {
+  if (!UUID_PATTERN.test(listingId)) return null
+
+  const { data, error } = await supabase
+    .from("listings")
+    .select(
+      "id,title,description,category,condition,price,stock,vehicle_brand,vehicle_model,year_from,year_to,engine_version,oem_code,region,commune,delivery_methods,contact_name,contact_phone,allow_whatsapp,created_at,listing_images(id,storage_path,position,is_primary)",
+    )
+    .eq("id", listingId)
+    .eq("status", "published")
+    .order("position", { referencedTable: "listing_images", ascending: true })
+    .maybeSingle()
+
+  if (error)
+    throw new ListingsQueryError(
+      "No pudimos cargar esta publicación en este momento.",
+    )
+  if (!data) return null
+
+  const row = data as unknown as PublishedListingRow
+  const images = (row.listing_images ?? [])
+    .slice()
+    .sort((first, second) => first.position - second.position)
+    .map((image) => ({
+      id: image.id,
+      url: getListingImagePublicUrl(image.storage_path),
+      position: image.position,
+      isPrimary: image.is_primary,
+    }))
+
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    category: row.category,
+    condition: row.condition,
+    price: Number(row.price),
+    stock: row.stock,
+    vehicleBrand: row.vehicle_brand,
+    vehicleModel: row.vehicle_model,
+    yearFrom: row.year_from,
+    yearTo: row.year_to,
+    engineVersion: row.engine_version,
+    oemCode: row.oem_code,
+    region: row.region,
+    commune: row.commune,
+    deliveryMethods: row.delivery_methods,
+    contactName: row.contact_name,
+    contactPhone: row.contact_phone,
+    allowWhatsapp: row.allow_whatsapp,
+    createdAt: row.created_at,
+    images,
+  }
+}
+
+function rowToPublicationFormData(row: OwnedListingRow): PublicationFormData {
+  return {
+    title: row.title,
+    description: row.description,
+    category: row.category,
+    condition: row.condition,
+    price: String(row.price),
+    quantity: String(row.stock),
+    vehicleBrand: row.vehicle_brand ?? "",
+    vehicleModel: row.vehicle_model ?? "",
+    yearFrom: row.year_from === null ? "" : String(row.year_from),
+    yearTo: row.year_to === null ? "" : String(row.year_to),
+    version: row.engine_version ?? "",
+    oemCode: row.oem_code ?? "",
+    multipleVehicles: false,
+    region: row.region,
+    commune: row.commune,
+    pickup: row.delivery_methods.includes("pickup"),
+    shipping: row.delivery_methods.includes("shipping"),
+    deliveryAgreement: row.delivery_methods.includes("delivery_agreement"),
+    sellerName: row.contact_name,
+    phone: row.contact_phone,
+    email: row.contact_email ?? "",
+    whatsapp: row.allow_whatsapp,
+  }
+}
+
+export async function getOwnedListingById(
+  listingId: string,
+): Promise<OwnedListingForEdit | null> {
+  if (!UUID_PATTERN.test(listingId)) return null
+  const { data: authData, error: authError } = await supabase.auth.getUser()
+  if (authError || !authData.user) return null
+
+  const { data, error } = await supabase
+    .from("listings")
+    .select(
+      "id,status,title,description,category,condition,price,stock,vehicle_brand,vehicle_model,year_from,year_to,engine_version,oem_code,region,commune,delivery_methods,contact_name,contact_phone,contact_email,allow_whatsapp,listing_images(id,storage_path,position,is_primary)",
+    )
+    .eq("id", listingId)
+    .eq("seller_id", authData.user.id)
+    .order("position", { referencedTable: "listing_images", ascending: true })
+    .maybeSingle()
+
+  if (error || !data) return null
+  const row = data as unknown as OwnedListingRow
+  return {
+    id: row.id,
+    status: row.status,
+    formData: rowToPublicationFormData(row),
+    images: (row.listing_images ?? []).map((image) => ({
+      kind: "existing",
+      id: image.id,
+      imageRecordId: image.id,
+      storagePath: image.storage_path,
+      position: image.position,
+      previewUrl: getListingImagePublicUrl(image.storage_path),
+      isPrimary: image.is_primary,
+    })),
   }
 }
 
@@ -157,6 +471,19 @@ function validateImages(images: ProductImage[]) {
       "Selecciona exactamente una imagen principal.",
     )
 
+  for (const image of images) {
+    if (!IMAGE_EXTENSIONS[image.file.type])
+      throw new ListingPublicationError(
+        "Todas las imágenes deben ser JPEG, PNG o WebP.",
+      )
+    if (image.file.size > MAX_IMAGE_SIZE_BYTES)
+      throw new ListingPublicationError(
+        `La imagen ${image.file.name} supera el límite de 5 MiB.`,
+      )
+  }
+}
+
+function validateNewImageFiles(images: ProductImage[]) {
   for (const image of images) {
     if (!IMAGE_EXTENSIONS[image.file.type])
       throw new ListingPublicationError(
@@ -320,5 +647,219 @@ export async function createPublication(
         : getPartiallyUploadedImages(error)
     await cleanupFailedPublication(listingId, imagesToCleanup)
     throw error
+  }
+}
+
+type ListingUpdateInput = Omit<CreateListingInput, "seller_id" | "listing_type" | "contact_email" | "status">
+
+function createListingUpdateInput(
+  data: PublicationFormData,
+  sellerId: string,
+): ListingUpdateInput {
+  const {
+    seller_id: _sellerId,
+    listing_type: _listingType,
+    contact_email: _contactEmail,
+    status: _status,
+    ...updateInput
+  } = createListingInput(data, sellerId)
+  return updateInput
+}
+
+function isNewImage(image: EditableProductImage): image is ProductImage {
+  return image.kind === "new"
+}
+
+function isExistingImage(
+  image: EditableProductImage,
+): image is ExistingProductImage {
+  return image.kind === "existing"
+}
+
+async function uploadAdditionalListingImages(
+  listingId: string,
+  userId: string,
+  images: PositionedNewImage[],
+): Promise<NewUploadedListingImage[]> {
+  const uploaded: NewUploadedListingImage[] = []
+  for (const { image, position } of images) {
+    const extension = IMAGE_EXTENSIONS[image.file.type]
+    const imageId = crypto.randomUUID()
+    const storagePath = `${userId}/${listingId}/${imageId}.${extension}`
+    const { error } = await supabase.storage
+      .from(LISTING_IMAGES_BUCKET)
+      .upload(storagePath, image.file, {
+        contentType: image.file.type,
+        upsert: false,
+      })
+    if (error) {
+      const uploadError = new ListingPublicationError(
+        "No pudimos subir una de las imágenes nuevas.",
+        error,
+      )
+      Object.assign(uploadError, { uploadedImages: uploaded })
+      throw uploadError
+    }
+    uploaded.push({
+      id: imageId,
+      listing_id: listingId,
+      storage_path: storagePath,
+      position,
+      is_primary: image.isPrimary,
+    })
+  }
+  return uploaded
+}
+
+async function cleanupNewUploadedImages(images: NewUploadedListingImage[]) {
+  if (images.length === 0) return
+  const paths = images.map((image) => image.storage_path)
+  await supabase
+    .from("listing_images")
+    .delete()
+    .in(
+      "id",
+      images.map((image) => image.id),
+    )
+  const { error } = await supabase.storage
+    .from(LISTING_IMAGES_BUCKET)
+    .remove(paths)
+  if (error)
+    console.warn("No se pudieron limpiar imágenes nuevas:", errorDetail(error))
+}
+
+export async function updateOwnedListing(
+  listingId: string,
+  data: PublicationFormData,
+  images: EditableProductImage[],
+  original: OwnedListingForEdit,
+): Promise<void> {
+  validateListingData(data)
+  if (images.length === 0 || images.length > MAX_IMAGE_COUNT)
+    throw new ListingPublicationError(
+      "La publicación debe tener entre 1 y 8 imágenes.",
+    )
+  if (images.filter((image) => image.isPrimary).length !== 1)
+    throw new ListingPublicationError(
+      "Selecciona exactamente una imagen principal.",
+    )
+
+  const newImages = images.filter(isNewImage)
+  validateNewImageFiles(newImages)
+
+  const { data: authData, error: authError } = await supabase.auth.getUser()
+  if (authError || !authData.user)
+    throw new ListingPublicationError("Tu sesión no está disponible.")
+
+  const { data: ownedRow, error: ownershipError } = await supabase
+    .from("listings")
+    .select("id")
+    .eq("id", listingId)
+    .eq("seller_id", authData.user.id)
+    .maybeSingle()
+  if (ownershipError || !ownedRow)
+    throw new ListingPublicationError("No tienes acceso a esta publicación.")
+
+  const finalImages = images.map((image, position) => ({ image, position }))
+  const newFinalImages = finalImages
+    .filter(({ image }) => isNewImage(image))
+    .map(({ image, position }) => ({ image: image as ProductImage, position }))
+  const keptExisting = finalImages
+    .filter(({ image }) => isExistingImage(image))
+    .map(({ image, position }) => ({
+      image: image as ExistingProductImage,
+      position,
+    }))
+  const keptIds = new Set(keptExisting.map(({ image }) => image.imageRecordId))
+  const removed = original.images.filter(
+    (image) => !keptIds.has(image.imageRecordId),
+  )
+  let uploaded: NewUploadedListingImage[] = []
+
+  try {
+    uploaded = await uploadAdditionalListingImages(
+      listingId,
+      authData.user.id,
+      newFinalImages,
+    )
+
+    const { error: listingError } = await supabase
+      .from("listings")
+      .update(createListingUpdateInput(data, authData.user.id))
+      .eq("id", listingId)
+      .eq("seller_id", authData.user.id)
+    if (listingError) throw listingError
+
+    if (original.images.length > 0) {
+      const staged = original.images.map((image, index) => ({
+        id: image.imageRecordId,
+        listing_id: listingId,
+        storage_path: image.storagePath,
+        position: 10000 + index,
+        is_primary: false,
+      }))
+      const { error } = await supabase.from("listing_images").upsert(staged)
+      if (error) throw error
+    }
+
+    if (uploaded.length > 0) {
+      const { error } = await supabase.from("listing_images").insert(uploaded)
+      if (error) throw error
+    }
+
+    if (keptExisting.length > 0) {
+      const finalized = keptExisting.map(({ image, position }) => ({
+        id: image.imageRecordId,
+        listing_id: listingId,
+        storage_path: image.storagePath,
+        position,
+        is_primary: image.isPrimary,
+      }))
+      const { error } = await supabase.from("listing_images").upsert(finalized)
+      if (error) throw error
+    }
+
+    if (removed.length > 0) {
+      const { error } = await supabase
+        .from("listing_images")
+        .delete()
+        .in(
+          "id",
+          removed.map((image) => image.imageRecordId),
+        )
+      if (error) throw error
+      const { error: storageError } = await supabase.storage
+        .from(LISTING_IMAGES_BUCKET)
+        .remove(removed.map((image) => image.storagePath))
+      if (storageError)
+        console.warn(
+          "No se pudieron eliminar algunos archivos antiguos:",
+          errorDetail(storageError),
+        )
+    }
+  } catch (error) {
+    const imagesToCleanup =
+      uploaded.length > 0
+        ? uploaded
+        : getPartiallyUploadedImages(error) as NewUploadedListingImage[]
+    await cleanupNewUploadedImages(imagesToCleanup)
+    const originalRows = original.images.map((image) => ({
+      id: image.imageRecordId,
+      listing_id: listingId,
+      storage_path: image.storagePath,
+      position: image.position,
+      is_primary: image.isPrimary,
+    }))
+    if (originalRows.length > 0)
+      await supabase.from("listing_images").upsert(originalRows)
+    await supabase
+      .from("listings")
+      .update(createListingUpdateInput(original.formData, authData.user.id))
+      .eq("id", listingId)
+      .eq("seller_id", authData.user.id)
+    throw new ListingPublicationError(
+      "No pudimos guardar todos los cambios. Inténtalo nuevamente.",
+      error,
+    )
   }
 }

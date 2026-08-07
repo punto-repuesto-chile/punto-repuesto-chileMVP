@@ -28,12 +28,25 @@ export type PublicationFormData = {
 export type PublicationField = keyof PublicationFormData | "images" | "delivery"
 export type PublicationErrors = Partial<Record<PublicationField, string>>
 
-export type ProductImage = {
+export type PublicationImagePreview = {
   id: string
-  file: File
   previewUrl: string
   isPrimary: boolean
 }
+
+export type ProductImage = PublicationImagePreview & {
+  kind: "new"
+  file: File
+}
+
+export type ExistingProductImage = PublicationImagePreview & {
+  kind: "existing"
+  imageRecordId: string
+  storagePath: string
+  position: number
+}
+
+export type EditableProductImage = ProductImage | ExistingProductImage
 
 export type SetPublicationField = <K extends keyof PublicationFormData,>(
   field: K,

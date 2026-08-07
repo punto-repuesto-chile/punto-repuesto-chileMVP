@@ -1,6 +1,10 @@
 import { Link, useNavigate } from "react-router-dom"
 
-export default function PublishHeader() {
+export default function PublishHeader({
+  label = "Publicando",
+}: {
+  label?: string
+}) {
   const navigate = useNavigate()
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-white/95 backdrop-blur">
@@ -25,7 +29,7 @@ export default function PublishHeader() {
           </span>
         </Link>
         <span className="rounded-full bg-orange/10 px-3 py-1.5 text-xs font-bold text-orange-dark">
-          Publicando
+          {label}
         </span>
       </div>
     </header>
