@@ -889,6 +889,8 @@ const QUICK_LINKS = [
 function Hero() {
   const [query, setQuery] = useState("")
 
+  const navigate = useNavigate()
+
   const [brand, setBrand] = useState("")
 
   const [model, setModel] = useState("")
@@ -908,6 +910,17 @@ function Hero() {
     color: "#102A36",
 
     focusRingColor: "#123B4A",
+  }
+
+  const navigateToSearch = () => {
+    const normalizedQuery = query.trim().replace(/\s+/g, " ")
+    if (!normalizedQuery) return
+    navigate(`/buscar?q=${encodeURIComponent(normalizedQuery)}`)
+  }
+
+  const submitSearch = (event: React.FormEvent) => {
+    event.preventDefault()
+    navigateToSearch()
   }
 
   return (
@@ -956,7 +969,9 @@ function Hero() {
             </motion.p>
 
             {/* Search box */}
-            <motion.div
+            <motion.form
+              onSubmit={submitSearch}
+              role="search"
               variants={imageEntrance}
               className="search-panel bg-white rounded-2xl border shadow-md p-5 transition-[transform,box-shadow,border-color] duration-300 focus-within:border-petrol focus-within:shadow-xl"
               style={{ borderColor: "#DCE3E6" }}
@@ -973,6 +988,11 @@ function Hero() {
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key !== "Enter") return
+                    event.preventDefault()
+                    navigateToSearch()
+                  }}
                   placeholder="Busca un producto, pieza o palabra clave…"
                   className="w-full pl-10 pr-4 py-3 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-opacity-30"
                   style={
@@ -1121,6 +1141,7 @@ function Hero() {
               </div>
 
               <motion.button
+                type="submit"
                 whileHover={reduceMotion ? undefined : { y: -2, scale: 1.01 }}
                 whileTap={{ scale: 0.98 }}
                 className="w-full py-3 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 transition-opacity hover:opacity-90 active:opacity-80 focus:outline-none focus:ring-2 focus:ring-orange/30"
@@ -1129,7 +1150,7 @@ function Hero() {
                 <IconSearch />
                 Buscar repuestos
               </motion.button>
-            </motion.div>
+            </motion.form>
 
             {/* Quick links */}
             <motion.div

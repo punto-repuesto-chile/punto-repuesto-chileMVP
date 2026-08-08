@@ -22,6 +22,8 @@ import PublishProductPage from "./pages/PublishProductPage"
 
 import RegisterPage from "./pages/RegisterPage"
 
+import SearchListingsPage from "./pages/SearchListingsPage"
+
 import "./index.css"
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
@@ -33,6 +35,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route path="/login" element={<LoginPage />} />
           <Route path="/registro" element={<RegisterPage />} />
           <Route path="/publicacion/:id" element={<ListingDetailPage />} />
+          <Route path="/buscar" element={<SearchListingsPage />} />
           <Route
             path="/publicacion/:id/editar"
             element={

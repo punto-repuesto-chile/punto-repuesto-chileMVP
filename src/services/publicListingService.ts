@@ -60,6 +60,27 @@ export class PublicListingsQueryError extends Error {
   }
 }
 
+const SEARCHABLE_COLUMNS = [
+  "title",
+  "category",
+  "vehicle_brand",
+  "vehicle_model",
+  "oem_code",
+  "region",
+  "commune",
+] as const
+
+function normalizeSearchTerm(term: string): string {
+  return term.trim().replace(/\s+/g, " ")
+}
+
+function searchableWords(term: string): string[] {
+  return normalizeSearchTerm(term)
+    .split(" ")
+    .map((word) => word.replace(/[,()*%\"]/g, ""))
+    .filter(Boolean)
+}
+
 export async function getPublishedListings({
   listingTypes,
   limit = 8,
@@ -94,6 +115,69 @@ export async function getPublishedListings({
     throw new PublicListingsQueryError(
       "No pudimos cargar estas publicaciones en este momento.",
     )
+  }
+
+  return ((data ?? []) as unknown as PublicListingCardRow[]).map((row) => {
+    const image = row.listing_images?.[0] ?? null
+    return {
+      id: row.id,
+      listingType: row.listing_type,
+      title: row.title,
+      category: row.category,
+      condition: row.condition,
+      price: Number(row.price),
+      stock: row.stock,
+      vehicleBrand: row.vehicle_brand,
+      vehicleModel: row.vehicle_model,
+      yearFrom: row.year_from,
+      yearTo: row.year_to,
+      region: row.region,
+      commune: row.commune,
+      createdAt: row.created_at,
+      primaryImagePath: image?.storage_path ?? null,
+      primaryImageUrl: image
+        ? getListingImagePublicUrl(image.storage_path)
+        : null,
+    }
+  })
+}
+
+export async function searchPublishedListings(
+  term: string,
+): Promise<PublicListingCard[]> {
+  const words = searchableWords(term)
+  if (words.length === 0) return []
+
+  let query = supabase
+    .from("listings")
+    .select(
+      "id,listing_type,title,category,condition,price,stock,vehicle_brand,vehicle_model,year_from,year_to,region,commune,created_at,listing_images(storage_path,position,is_primary)",
+    )
+    .eq("status", "published")
+    .order("created_at", { ascending: false })
+    .order("is_primary", {
+      referencedTable: "listing_images",
+      ascending: false,
+    })
+    .order("position", {
+      referencedTable: "listing_images",
+      ascending: true,
+    })
+    .limit(1, { referencedTable: "listing_images" })
+
+  for (const word of words)
+    query = query.or(
+      SEARCHABLE_COLUMNS.map((column) => `${column}.ilike.*${word}*`).join(","),
+    )
+
+  const { data, error } = await query
+  if (error) {
+    if (import.meta.env.DEV)
+      console.error("No se pudo buscar en el catálogo público:", {
+        code: error.code,
+        message: error.message,
+      })
+    throw new PublicListingsQueryError("No pudimos cargar los resultados.")
   }
 
   return ((data ?? []) as unknown as PublicListingCardRow[]).map((row) => {
