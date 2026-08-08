@@ -9,6 +9,7 @@ import App from "./App"
 import ProtectedRoute from "./components/auth/ProtectedRoute"
 
 import { AuthProvider } from "./context/AuthContext"
+
 import { FavoritesProvider } from "./context/FavoritesContext"
 
 import EditListingPage from "./pages/EditListingPage"
@@ -25,6 +26,7 @@ import RegisterPage from "./pages/RegisterPage"
 
 import SearchListingsPage from "./pages/SearchListingsPage"
 import FavoritesPage from "./pages/FavoritesPage"
+import SellerProfilePage from "./pages/SellerProfilePage"
 
 import "./index.css"
 
@@ -38,6 +40,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route path="/login" element={<LoginPage />} />
             <Route path="/registro" element={<RegisterPage />} />
             <Route path="/publicacion/:id" element={<ListingDetailPage />} />
+            <Route path="/vendedor/:sellerId" element={<SellerProfilePage />} />
             <Route path="/buscar" element={<SearchListingsPage />} />
             <Route
               path="/favoritos"

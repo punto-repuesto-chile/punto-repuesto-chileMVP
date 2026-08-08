@@ -3,6 +3,7 @@ import { useEffect, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 
 import SiteFooter from "../components/layout/SiteFooter"
+
 import FavoriteButton from "../components/favorites/FavoriteButton"
 
 import ListingCompatibility from "../components/listings/ListingCompatibility"
@@ -185,6 +186,7 @@ export default function ListingDetailPage() {
                   name={listing.contactName}
                   phone={listing.contactPhone}
                   allowWhatsapp={listing.allowWhatsapp}
+                  sellerId={listing.sellerId}
                 />
               </div>
             </div>
