@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
+
 import { AnimatePresence, motion, useReducedMotion } from "motion/react"
+
 import type {
   ListingCondition,
   PublishedListingImage,
@@ -7,48 +9,71 @@ import type {
 
 const PRICE_FORMATTER = new Intl.NumberFormat("es-CL", {
   style: "currency",
+
   currency: "CLP",
+
   maximumFractionDigits: 0,
 })
 
 const CONDITION_LABELS: Record<ListingCondition, string> = {
   new: "Nuevo",
+
   used: "Usado",
+
   refurbished: "Reacondicionado",
 }
 
 export default function ListingGallery({
   images,
+
   title,
+
   category,
+
   condition,
+
   price,
+
   commune,
+
   stock,
 }: {
   images: PublishedListingImage[]
+
   title: string
+
   category: string
+
   condition: ListingCondition
+
   price: number
+
   commune: string
+
   stock: number
 }) {
   const orderedImages = useMemo(() => {
     const imagesByPosition = [...images].sort(
       (first, second) => first.position - second.position,
     )
+
     const primaryImage = imagesByPosition.find((image) => image.isPrimary)
+
     if (!primaryImage) return imagesByPosition
+
     return [
       primaryImage,
+
       ...imagesByPosition.filter((image) => image.id !== primaryImage.id),
     ]
   }, [images])
 
   const initialImage = orderedImages[0]
+
   const [selectedId, setSelectedId] = useState(initialImage?.id ?? null)
+
   const [direction, setDirection] = useState(1)
+
   const reduceMotion = useReducedMotion()
 
   useEffect(() => {
@@ -57,28 +82,36 @@ export default function ListingGallery({
 
   const selectedImage =
     orderedImages.find((image) => image.id === selectedId) ?? initialImage
+
   const selectedIndex = selectedImage
     ? orderedImages.findIndex((image) => image.id === selectedImage.id)
     : -1
 
   const showPrevious = () => {
     if (orderedImages.length < 2) return
+
     const previousIndex =
       selectedIndex <= 0 ? orderedImages.length - 1 : selectedIndex - 1
+
     setDirection(-1)
+
     setSelectedId(orderedImages[previousIndex].id)
   }
 
   const showNext = () => {
     if (orderedImages.length < 2) return
+
     const nextIndex =
       selectedIndex >= orderedImages.length - 1 ? 0 : selectedIndex + 1
+
     setDirection(1)
+
     setSelectedId(orderedImages[nextIndex].id)
   }
 
   const selectThumbnail = (imageId: string, imageIndex: number) => {
     setDirection(imageIndex >= selectedIndex ? 1 : -1)
+
     setSelectedId(imageId)
   }
 
@@ -145,6 +178,7 @@ export default function ListingGallery({
             exit={{ opacity: 0, x: reduceMotion ? 0 : direction * -12 }}
             transition={{
               duration: reduceMotion ? 0.01 : 0.24,
+
               ease: "easeOut",
             }}
             className="h-auto max-h-full w-auto max-w-full object-contain p-2 sm:p-4"
@@ -159,11 +193,17 @@ export default function ListingGallery({
               className="absolute z-20 flex h-10 w-10 items-center justify-center rounded-full text-petrol-dark transition duration-200 hover:brightness-105 sm:h-11 sm:w-11"
               style={{
                 left: "0.875rem",
+
                 top: "50%",
+
                 transform: "translateY(-50%)",
+
                 backgroundColor: "rgba(255, 255, 255, 0.82)",
+
                 border: "1px solid rgba(255, 255, 255, 0.9)",
+
                 boxShadow: "0 4px 16px rgba(16, 42, 54, 0.16)",
+
                 backdropFilter: "blur(8px)",
               }}
             >
@@ -187,11 +227,17 @@ export default function ListingGallery({
               className="absolute z-20 flex h-10 w-10 items-center justify-center rounded-full text-petrol-dark transition duration-200 hover:brightness-105 sm:h-11 sm:w-11"
               style={{
                 right: "0.875rem",
+
                 top: "50%",
+
                 transform: "translateY(-50%)",
+
                 backgroundColor: "rgba(255, 255, 255, 0.82)",
+
                 border: "1px solid rgba(255, 255, 255, 0.9)",
+
                 boxShadow: "0 4px 16px rgba(16, 42, 54, 0.16)",
+
                 backdropFilter: "blur(8px)",
               }}
             >

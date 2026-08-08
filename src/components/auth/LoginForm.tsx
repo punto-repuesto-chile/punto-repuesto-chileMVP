@@ -1,32 +1,47 @@
 import { useRef, useState, type FormEvent } from "react"
+
 import { Link, useLocation, useNavigate } from "react-router-dom"
+
 import { useAuth } from "../../context/AuthContext"
+
 import PasswordInput from "./PasswordInput"
 
 type FormErrors = {
   email?: string
+
   password?: string
 }
+
 type LocationState = {
   from?: string
+
   reason?: "publish" | "my-listings" | "edit-listing"
 }
 
 export default function LoginForm() {
   const { signIn } = useAuth()
+
   const navigate = useNavigate()
+
   const location = useLocation()
+
   const state = location.state as LocationState | null
+
   const [email, setEmail] = useState("")
+
   const [password, setPassword] = useState("")
+
   const [errors, setErrors] = useState<FormErrors>({})
+
   const [message, setMessage] = useState<{
     type: "info" | "error" | "success"
+
     text: string
   } | null>(
     state?.reason
       ? {
           type: "info",
+
           text:
             state.reason === "edit-listing"
               ? "Inicia sesión para editar esta publicación. Después volverás automáticamente al formulario."
@@ -36,49 +51,68 @@ export default function LoginForm() {
         }
       : null,
   )
+
   const [isSubmitting, setIsSubmitting] = useState(false)
+
   const emailRef = useRef<HTMLInputElement>(null)
 
   const validate = () => {
     const nextErrors: FormErrors = {}
+
     if (!email.trim())
       nextErrors.email = "El correo electrónico es obligatorio."
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
       nextErrors.email = "Ingresa un correo electrónico válido."
+
     if (!password) nextErrors.password = "La contraseña es obligatoria."
+
     return nextErrors
   }
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
+
     const nextErrors = validate()
+
     if (Object.keys(nextErrors).length) {
       setErrors(nextErrors)
+
       setMessage({ type: "error", text: "Revisa los campos indicados." })
+
       if (nextErrors.email) emailRef.current?.focus()
       else document.getElementById("password")?.focus()
+
       return
     }
 
     setErrors({})
+
     setMessage(null)
+
     setIsSubmitting(true)
+
     const { error } = await signIn({ email: email.trim(), password })
+
     setIsSubmitting(false)
 
     if (error) {
       setMessage({
         type: "error",
+
         text: "El correo o la contraseña no son correctos.",
       })
+
       return
     }
 
     setMessage({
       type: "success",
+
       text: "Inicio de sesión correcto. Redirigiendo…",
     })
+
     const destination = state?.from?.startsWith("/") ? state.from : "/"
+
     navigate(destination, { replace: true })
   }
 
@@ -118,6 +152,7 @@ export default function LoginForm() {
           value={email}
           onChange={(event) => {
             setEmail(event.target.value)
+
             setErrors((current) => ({ ...current, email: undefined }))
           }}
           placeholder="nombre@correo.cl"
@@ -144,6 +179,7 @@ export default function LoginForm() {
         error={errors.password}
         onChange={(value) => {
           setPassword(value)
+
           setErrors((current) => ({ ...current, password: undefined }))
         }}
       />
@@ -153,6 +189,7 @@ export default function LoginForm() {
           onClick={() =>
             setMessage({
               type: "info",
+
               text: "La recuperación de contraseña estará disponible próximamente.",
             })
           }

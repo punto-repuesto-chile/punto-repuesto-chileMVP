@@ -4,30 +4,50 @@ import type {
   PublicationImagePreview,
   SetPublicationField,
 } from "../../types/publication"
+
 import BasicInformationSection from "./BasicInformationSection"
+
 import LocationDeliverySection from "./LocationDeliverySection"
+
 import ProductImagesSection from "./ProductImagesSection"
+
 import PublicationSummary from "./PublicationSummary"
+
 import SellerContactSection from "./SellerContactSection"
+
 import VehicleCompatibilitySection from "./VehicleCompatibilitySection"
 
 export default function PublicationFormFields({
   data,
+
   images,
+
   errors,
+
   setField,
+
   addFiles,
+
   removeImage,
+
   setPrimary,
+
   disableEmail = false,
 }: {
   data: PublicationFormData
+
   images: PublicationImagePreview[]
+
   errors: PublicationErrors
+
   setField: SetPublicationField
+
   addFiles: (files: File[]) => void
+
   removeImage: (id: string) => void
+
   setPrimary: (id: string) => void
+
   disableEmail?: boolean
 }) {
   return (

@@ -2,7 +2,9 @@ import type { PublishedListing } from "../../services/listingService"
 
 const DELIVERY_LABELS = {
   pickup: "Retiro presencial",
+
   shipping: "Envío disponible",
+
   delivery_agreement: "Entrega por acordar",
 }
 
@@ -12,6 +14,7 @@ export default function ListingDelivery({
   methods: PublishedListing["deliveryMethods"]
 }) {
   if (methods.length === 0) return null
+
   return (
     <section className="rounded-2xl border border-border bg-white p-5 shadow-sm sm:p-6">
       <h2 className="font-display text-xl font-bold">Entrega</h2>

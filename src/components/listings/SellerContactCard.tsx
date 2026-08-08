@@ -1,20 +1,28 @@
 function sanitizePhoneForWhatsapp(phone: string): string {
   const digits = phone.replace(/\D/g, "")
+
   if (digits.startsWith("56")) return digits
+
   if (digits.startsWith("9")) return `56${digits}`
+
   return digits
 }
 
 export default function SellerContactCard({
   name,
+
   phone,
+
   allowWhatsapp,
 }: {
   name: string
+
   phone: string
+
   allowWhatsapp: boolean
 }) {
   const whatsappPhone = sanitizePhoneForWhatsapp(phone)
+
   const telephonePhone = phone.replace(/[^\d+]/g, "")
 
   return (

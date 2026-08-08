@@ -1,15 +1,4 @@
-export const PRODUCT_CATEGORIES = [
-  "Motor",
-  "Frenos",
-  "Suspensión",
-  "Carrocería",
-  "Neumáticos y llantas",
-  "Electricidad",
-  "Iluminación",
-  "Accesorios",
-  "Transmisión",
-  "Otros",
-]
+export { PRODUCT_CATEGORIES } from "../constants/listingCategories"
 
 export const VEHICLE_BRANDS = [
   "Chevrolet",

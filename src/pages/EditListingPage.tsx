@@ -1,13 +1,18 @@
 import { useEffect, useRef, useState, type FormEvent } from "react"
+
 import { Link, useNavigate, useParams } from "react-router-dom"
+
 import PublicationFormFields from "../components/publish/PublicationFormFields"
+
 import PublishHeader from "../components/publish/PublishHeader"
+
 import {
   getOwnedListingById,
   ListingPublicationError,
   updateOwnedListing,
   type OwnedListingForEdit,
 } from "../services/listingService"
+
 import type {
   EditableProductImage,
   PublicationErrors,
@@ -15,6 +20,7 @@ import type {
   PublicationFormData,
   SetPublicationField,
 } from "../types/publication"
+
 import {
   ACCEPTED_IMAGE_TYPES,
   MAX_PUBLICATION_IMAGES,
@@ -23,41 +29,64 @@ import {
 
 export default function EditListingPage() {
   const { id = "" } = useParams()
+
   const navigate = useNavigate()
+
   const [original, setOriginal] = useState<OwnedListingForEdit | null>(null)
+
   const [data, setData] = useState<PublicationFormData | null>(null)
+
   const [images, setImages] = useState<EditableProductImage[]>([])
+
   const imagesRef = useRef<EditableProductImage[]>([])
+
   const submissionLockRef = useRef(false)
+
   const redirectTimerRef = useRef<number | null>(null)
+
   const [errors, setErrors] = useState<PublicationErrors>({})
+
   const [isLoading, setIsLoading] = useState(true)
+
   const [isSubmitting, setIsSubmitting] = useState(false)
+
   const [hasAccess, setHasAccess] = useState(true)
+
   const [notice, setNotice] = useState<{
     type: "success" | "error"
+
     message: string
   } | null>(null)
 
   useEffect(() => {
     let active = true
+
     void getOwnedListingById(id)
+
       .then((listing) => {
         if (!active) return
+
         if (!listing) {
           setHasAccess(false)
+
           return
         }
+
         setOriginal(listing)
+
         setData(listing.formData)
+
         setImages(listing.images)
       })
+
       .catch(() => {
         if (active) setHasAccess(false)
       })
+
       .finally(() => {
         if (active) setIsLoading(false)
       })
+
     return () => {
       active = false
     }
@@ -72,14 +101,17 @@ export default function EditListingPage() {
       imagesRef.current.forEach((image) => {
         if (image.kind === "new") URL.revokeObjectURL(image.previewUrl)
       })
+
       if (redirectTimerRef.current !== null)
         window.clearTimeout(redirectTimerRef.current)
     },
+
     [],
   )
 
   const setField: SetPublicationField = (field, value) => {
     setData((current) => (current ? { ...current, [field]: value } : current))
+
     setErrors((current) => ({ ...current, [field]: undefined }))
   }
 
@@ -87,21 +119,31 @@ export default function EditListingPage() {
     const validFiles = files.filter((file) =>
       ACCEPTED_IMAGE_TYPES.includes(file.type),
     )
+
     setImages((current) => {
       const available = Math.max(0, MAX_PUBLICATION_IMAGES - current.length)
+
       const additions = validFiles.slice(0, available).map((file, index) => ({
         kind: "new" as const,
+
         id: `${file.name}-${file.lastModified}-${crypto.randomUUID()}`,
+
         file,
+
         previewUrl: URL.createObjectURL(file),
+
         isPrimary: current.length === 0 && index === 0,
       }))
+
       return [...current, ...additions]
     })
+
     setErrors((current) => ({ ...current, images: undefined }))
+
     if (validFiles.length !== files.length)
       setNotice({
         type: "error",
+
         message:
           "Algunos archivos fueron omitidos. Usa solamente PNG, JPG, JPEG o WebP.",
       })
@@ -110,10 +152,14 @@ export default function EditListingPage() {
   const removeImage = (imageId: string) => {
     setImages((current) => {
       const removed = current.find((image) => image.id === imageId)
+
       if (removed?.kind === "new") URL.revokeObjectURL(removed.previewUrl)
+
       const remaining = current.filter((image) => image.id !== imageId)
+
       if (removed?.isPrimary && remaining[0])
         remaining[0] = { ...remaining[0], isPrimary: true }
+
       return remaining
     })
   }
@@ -121,44 +167,64 @@ export default function EditListingPage() {
   const focusFirstError = (fields: PublicationField[]) => {
     requestAnimationFrame(() =>
       document
+
         .getElementById(fields[0])
+
         ?.scrollIntoView({ behavior: "smooth", block: "center" }),
     )
   }
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
+
     if (!data || !original || submissionLockRef.current) return
+
     const nextErrors = validatePublication(data, images)
+
     const invalidFields = Object.keys(nextErrors) as PublicationField[]
+
     if (invalidFields.length > 0) {
       setErrors(nextErrors)
+
       setNotice({
         type: "error",
+
         message: "Revisa los campos destacados antes de guardar.",
       })
+
       focusFirstError(invalidFields)
+
       return
     }
 
     submissionLockRef.current = true
+
     setIsSubmitting(true)
+
     setErrors({})
+
     setNotice(null)
+
     try {
       await updateOwnedListing(id, data, images, original)
+
       setNotice({
         type: "success",
+
         message: "Los cambios se guardaron correctamente.",
       })
+
       window.scrollTo({ top: 0, behavior: "smooth" })
+
       redirectTimerRef.current = window.setTimeout(
         () => navigate(`/publicacion/${id}`, { replace: true }),
+
         700,
       )
     } catch (error) {
       setNotice({
         type: "error",
+
         message:
           error instanceof ListingPublicationError
             ? error.message
@@ -166,6 +232,7 @@ export default function EditListingPage() {
       })
     } finally {
       submissionLockRef.current = false
+
       setIsSubmitting(false)
     }
   }
@@ -244,6 +311,7 @@ export default function EditListingPage() {
               setImages((current) =>
                 current.map((image) => ({
                   ...image,
+
                   isPrimary: image.id === imageId,
                 })),
               )
