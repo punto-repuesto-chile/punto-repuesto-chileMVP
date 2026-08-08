@@ -176,6 +176,41 @@ export async function getPublishedListings({
   )
 }
 
+export async function getPublishedListingsByIds(
+  listingIds: string[],
+): Promise<PublicListingCard[]> {
+  if (listingIds.length === 0) return []
+
+  const { data, error } = await supabase
+    .from("listings")
+    .select(
+      "id,listing_type,title,category,condition,price,stock,vehicle_brand,vehicle_model,year_from,year_to,region,commune,created_at,listing_images(storage_path,position,is_primary)",
+    )
+    .eq("status", "published")
+    .in("id", listingIds)
+    .order("is_primary", {
+      referencedTable: "listing_images",
+      ascending: false,
+    })
+    .order("position", {
+      referencedTable: "listing_images",
+      ascending: true,
+    })
+    .limit(1, { referencedTable: "listing_images" })
+
+  if (error) {
+    if (import.meta.env.DEV)
+      console.error(
+        `No se pudieron cargar publicaciones favoritas (${error.code}): ${error.message}`,
+      )
+    throw new PublicListingsQueryError("No pudimos cargar tus favoritos.")
+  }
+
+  return ((data ?? []) as unknown as PublicListingCardRow[]).map(
+    mapPublicListingCard,
+  )
+}
+
 export async function searchPublishedListings(
   options: SearchPublishedListingsOptions = {},
 ): Promise<PaginatedPublicListings> {

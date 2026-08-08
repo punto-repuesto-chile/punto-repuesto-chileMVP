@@ -1,6 +1,7 @@
 import { motion } from "motion/react"
 import { Link } from "react-router-dom"
 import { cardEntrance } from "../../animations/variants"
+import FavoriteButton from "../favorites/FavoriteButton"
 import type {
   PublicListingCard as PublicListingCardData,
   PublicListingCondition,
@@ -44,9 +45,13 @@ export default function PublicListingCard({
     <motion.article
       variants={cardEntrance}
       whileHover={{ y: -4 }}
-      className="animated-card group overflow-hidden rounded-2xl border bg-white transition-[box-shadow,border-color] hover:shadow-xl"
+      className="animated-card group relative overflow-hidden rounded-2xl border bg-white transition-[box-shadow,border-color] hover:shadow-xl"
       style={{ borderColor: "#DCE3E6" }}
     >
+      <FavoriteButton
+        listingId={listing.id}
+        className="absolute right-2.5 top-2.5 z-10"
+      />
       <Link
         to={`/publicacion/${listing.id}`}
         className={`relative block overflow-hidden ${
