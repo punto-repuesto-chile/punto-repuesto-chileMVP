@@ -1,19 +1,23 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react"
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react"
 import { createPortal } from "react-dom"
 import { Link, useSearchParams } from "react-router-dom"
 import SiteFooter from "../components/layout/SiteFooter"
 import PublicListingCard from "../components/listings/PublicListingCard"
+import PublicListingsPagination from "../components/listings/PublicListingsPagination"
 import PublicListingsSkeleton from "../components/listings/PublicListingsSkeleton"
 import SearchFiltersPanel, {
   type SearchFiltersDraft,
 } from "../components/listings/SearchFiltersPanel"
 import {
   getPublicListingFilterOptions,
+  PUBLIC_LISTINGS_PAGE_SIZE,
   searchPublishedListings,
   type PublicListingCard as PublicListingCardData,
   type PublicListingCondition,
   type PublicListingFilterOptions,
   type PublicListingSort,
+  type PublicListingType,
+  type PaginatedPublicListings,
   type SearchPublishedListingsOptions,
 } from "../services/publicListingService"
 
@@ -25,6 +29,7 @@ const EMPTY_FILTER_OPTIONS: PublicListingFilterOptions = {
 }
 
 const FILTER_PARAM_KEYS = [
+  "tipo",
   "categoria",
   "marca",
   "modelo",
@@ -40,6 +45,20 @@ const CONDITION_LABELS: Record<PublicListingCondition, string> = {
   used: "Usado",
   refurbished: "Reacondicionado",
 }
+
+const LISTING_TYPE_LABELS: Record<PublicListingType, string> = {
+  part: "Repuestos",
+  accessory: "Accesorios",
+  vehicle: "Vehículos",
+  salvage_inventory: "Inventario de desarme",
+}
+
+const VALID_LISTING_TYPES = new Set<PublicListingType>([
+  "part",
+  "accessory",
+  "vehicle",
+  "salvage_inventory",
+])
 
 const VALID_CONDITIONS = new Set<PublicListingCondition>([
   "new",
@@ -70,14 +89,31 @@ function conditionFrom(
     : undefined
 }
 
+function listingTypeFrom(value: string | null): PublicListingType | undefined {
+  return value && VALID_LISTING_TYPES.has(value as PublicListingType)
+    ? value as PublicListingType
+    : undefined
+}
+
 function sortFrom(value: string | null): PublicListingSort {
   return value && VALID_SORTS.has(value as PublicListingSort)
     ? value as PublicListingSort
     : "recientes"
 }
 
+function pageFrom(value: string | null): number {
+  if (!value || !/^\d+$/.test(value)) return 1
+  const page = Number(value)
+  return Number.isSafeInteger(page) && page > 0 ? page : 1
+}
+
+function isInvalidPage(value: string | null): boolean {
+  return value !== null && String(pageFrom(value)) !== value
+}
+
 function draftFromParams(params: URLSearchParams): SearchFiltersDraft {
   return {
+    listingType: listingTypeFrom(params.get("tipo")) ?? "",
     category: params.get("categoria") ?? "",
     brand: params.get("marca") ?? "",
     model: params.get("modelo") ?? "",
@@ -110,6 +146,7 @@ function optionsFromParams(
 ): SearchPublishedListingsOptions {
   return {
     query: normalizeQuery(params.get("q") ?? "") || undefined,
+    listingType: listingTypeFrom(params.get("tipo")),
     category: params.get("categoria") || undefined,
     brand: params.get("marca") || undefined,
     model: params.get("modelo") || undefined,
@@ -119,6 +156,7 @@ function optionsFromParams(
     minPrice: optionalInteger(params.get("precio_min")),
     maxPrice: optionalInteger(params.get("precio_max")),
     sort: sortFrom(params.get("orden")),
+    page: pageFrom(params.get("pagina")),
   }
 }
 
@@ -139,6 +177,7 @@ export default function SearchListingsPage() {
   )
   const appliedValidationError = validationError(appliedDraft)
   const sort = sortFrom(searchParams.get("orden"))
+  const page = pageFrom(searchParams.get("pagina"))
   const hasActiveFilters = FILTER_PARAM_KEYS.some((key) =>
     searchParams.has(key),
   )
@@ -151,10 +190,27 @@ export default function SearchListingsPage() {
   const [optionsError, setOptionsError] = useState<string | null>(null)
   const [optionsRequestNumber, setOptionsRequestNumber] = useState(0)
   const [listings, setListings] = useState<PublicListingCardData[]>([])
+  const [pagination, setPagination] =
+    useState<Pick<PaginatedPublicListings, "total" | "pageSize" | "totalPages">>(
+      {
+        total: 0,
+        pageSize: PUBLIC_LISTINGS_PAGE_SIZE,
+        totalPages: 0,
+      },
+    )
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [requestNumber, setRequestNumber] = useState(0)
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
+  const resultsHeadingRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const rawPage = searchParams.get("pagina")
+    if (!isInvalidPage(rawPage)) return
+    const next = new URLSearchParams(searchParams)
+    next.set("pagina", "1")
+    setSearchParams(next, { replace: true })
+  }, [paramsKey, searchParams, setSearchParams])
 
   useEffect(() => {
     setSearchDraft(query)
@@ -187,6 +243,7 @@ export default function SearchListingsPage() {
     setError(null)
     if (appliedValidationError) {
       setListings([])
+      setPagination((current) => ({ ...current, total: 0, totalPages: 0 }))
       setIsLoading(false)
       return () => {
         active = false
@@ -196,7 +253,21 @@ export default function SearchListingsPage() {
     setIsLoading(true)
     void searchPublishedListings(searchOptions)
       .then((result) => {
-        if (active) setListings(result)
+        if (!active) return
+        const normalizedPage =
+          result.totalPages === 0 ? 1 : Math.min(page, result.totalPages)
+        if (page !== normalizedPage) {
+          const next = new URLSearchParams(searchParams)
+          next.set("pagina", String(normalizedPage))
+          setSearchParams(next, { replace: true })
+          return
+        }
+        setListings(result.items)
+        setPagination({
+          total: result.total,
+          pageSize: result.pageSize,
+          totalPages: result.totalPages,
+        })
       })
       .catch((requestError: unknown) => {
         if (!active) return
@@ -227,6 +298,7 @@ export default function SearchListingsPage() {
   const updateSearch = () => {
     const next = new URLSearchParams(searchParams)
     setOrDelete(next, "q", normalizeQuery(searchDraft))
+    next.set("pagina", "1")
     setSearchParams(next)
   }
 
@@ -241,6 +313,7 @@ export default function SearchListingsPage() {
     if (nextError) return
 
     const next = new URLSearchParams(searchParams)
+    setOrDelete(next, "tipo", filterDraft.listingType)
     setOrDelete(next, "categoria", filterDraft.category)
     setOrDelete(next, "marca", filterDraft.brand)
     setOrDelete(next, "modelo", filterDraft.model)
@@ -249,6 +322,7 @@ export default function SearchListingsPage() {
     setOrDelete(next, "condicion", filterDraft.condition)
     setOrDelete(next, "precio_min", filterDraft.minPrice)
     setOrDelete(next, "precio_max", filterDraft.maxPrice)
+    next.set("pagina", "1")
     setSearchParams(next)
     setMobileFiltersOpen(false)
   }
@@ -256,6 +330,7 @@ export default function SearchListingsPage() {
   const clearFilters = () => {
     const next = new URLSearchParams(searchParams)
     for (const key of FILTER_PARAM_KEYS) next.delete(key)
+    next.set("pagina", "1")
     setSearchParams(next)
     setFilterError(null)
     setMobileFiltersOpen(false)
@@ -265,6 +340,7 @@ export default function SearchListingsPage() {
     const next = new URLSearchParams(searchParams)
     next.delete(key)
     if (key === "marca") next.delete("modelo")
+    next.set("pagina", "1")
     setSearchParams(next)
   }
 
@@ -272,10 +348,29 @@ export default function SearchListingsPage() {
     const next = new URLSearchParams(searchParams)
     if (nextSort === "recientes") next.delete("orden")
     else next.set("orden", nextSort)
+    next.set("pagina", "1")
     setSearchParams(next)
   }
 
+  const updatePage = (nextPage: number) => {
+    if (nextPage === page || nextPage < 1 || nextPage > pagination.totalPages)
+      return
+    const next = new URLSearchParams(searchParams)
+    next.set("pagina", String(nextPage))
+    setSearchParams(next)
+    resultsHeadingRef.current?.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "auto"
+        : "smooth",
+      block: "start",
+    })
+  }
+
   const chips = [
+    appliedDraft.listingType && {
+      key: "tipo" as const,
+      label: LISTING_TYPE_LABELS[appliedDraft.listingType],
+    },
     appliedDraft.category && {
       key: "categoria" as const,
       label: appliedDraft.category,
@@ -409,7 +504,10 @@ export default function SearchListingsPage() {
           </aside>
 
           <section aria-live="polite" className="min-w-0">
-            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div
+              ref={resultsHeadingRef}
+              className="mb-5 scroll-mt-24 flex flex-wrap items-center justify-between gap-3"
+            >
               <div className="flex items-center gap-3">
                 <button
                   type="button"
@@ -420,8 +518,8 @@ export default function SearchListingsPage() {
                 </button>
                 {!isLoading && !error && !appliedValidationError && (
                   <p className="text-sm font-semibold text-muted">
-                    {listings.length}{" "}
-                    {listings.length === 1
+                    {pagination.total}{" "}
+                    {pagination.total === 1
                       ? "publicación encontrada"
                       : "publicaciones encontradas"}
                   </p>
@@ -466,7 +564,7 @@ export default function SearchListingsPage() {
             )}
 
             {isLoading ? (
-              <PublicListingsSkeleton count={8} />
+              <PublicListingsSkeleton count={PUBLIC_LISTINGS_PAGE_SIZE} />
             ) : appliedValidationError ? (
               <div
                 role="alert"
@@ -526,11 +624,18 @@ export default function SearchListingsPage() {
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-                {listings.map((listing) => (
-                  <PublicListingCard key={listing.id} listing={listing} />
-                ))}
-              </div>
+              <>
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                  {listings.map((listing) => (
+                    <PublicListingCard key={listing.id} listing={listing} />
+                  ))}
+                </div>
+                <PublicListingsPagination
+                  currentPage={page}
+                  totalPages={pagination.totalPages}
+                  onPageChange={updatePage}
+                />
+              </>
             )}
           </section>
         </div>

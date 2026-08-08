@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 
 import {
@@ -23,6 +23,11 @@ import {
 import { StaggerGroup } from "./components/animation/Reveal"
 import PublicListingCard from "./components/listings/PublicListingCard"
 import PublicListingsSkeleton from "./components/listings/PublicListingsSkeleton"
+import {
+  LISTING_CATEGORY_VALUES,
+  PARTS_MENU_CATEGORIES,
+  categorySearchUrl,
+} from "./constants/listingCategories"
 import { useAuth } from "./context/AuthContext"
 import { DESARMADURAS, type Desarmaduria } from "./data/marketplace"
 import {
@@ -555,6 +560,12 @@ function Badge({
 function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
 
+  const [partsMenuOpen, setPartsMenuOpen] = useState(false)
+
+  const [mobilePartsOpen, setMobilePartsOpen] = useState(false)
+
+  const partsMenuRef = useRef<HTMLDivElement>(null)
+
   const [userMenuOpen, setUserMenuOpen] = useState(false)
 
   const [authNotice, setAuthNotice] = useState("")
@@ -588,7 +599,30 @@ function Navbar() {
 
   useMotionValueEvent(scrollY, "change", (latest) => setIsScrolled(latest > 24))
 
-  const links = ["Repuestos", "Vehículos", "Desarmadurías", "Cómo funciona"]
+  const links = [
+    { label: "Vehículos", to: "/buscar?tipo=vehicle" },
+    { label: "Desarmadurías", href: "#" },
+    { label: "Cómo funciona", href: "#" },
+  ]
+
+  useEffect(() => {
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (!partsMenuRef.current?.contains(event.target as Node))
+        setPartsMenuOpen(false)
+    }
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return
+      setPartsMenuOpen(false)
+      setMobilePartsOpen(false)
+    }
+
+    document.addEventListener("mousedown", closeOnOutsideClick)
+    document.addEventListener("keydown", closeOnEscape)
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideClick)
+      document.removeEventListener("keydown", closeOnEscape)
+    }
+  }, [])
 
   const showComingSoon = (label: string) => {
     setAuthNotice(`${label} estará disponible próximamente.`)
@@ -655,17 +689,96 @@ function Navbar() {
             variants={staggerHeader}
             className="hidden md:flex items-center gap-6"
           >
-            {links.map((l) => (
-              <motion.a
-                variants={fadeDown}
-                key={l}
-                href="#"
-                className="text-sm font-medium transition-colors hover:opacity-80"
+            <motion.div
+              ref={partsMenuRef}
+              variants={fadeDown}
+              className="relative"
+              onMouseEnter={() => setPartsMenuOpen(true)}
+              onMouseLeave={() => setPartsMenuOpen(false)}
+            >
+              <button
+                type="button"
+                aria-expanded={partsMenuOpen}
+                aria-haspopup="menu"
+                onClick={() => setPartsMenuOpen((current) => !current)}
+                className="flex items-center gap-1 text-sm font-medium transition-colors hover:opacity-80"
                 style={{ color: "#102A36" }}
               >
-                {l}
-              </motion.a>
-            ))}
+                Repuestos
+                <span
+                  className={`transition-transform ${
+                    partsMenuOpen ? "rotate-180" : ""
+                  }`}
+                >
+                  <IconChevronDown />
+                </span>
+              </button>
+              {partsMenuOpen && (
+                <div
+                  role="menu"
+                  aria-label="Categorías de repuestos"
+                  className="absolute left-1/2 top-full z-50 w-[min(720px,calc(100vw-2rem))] -translate-x-1/2 rounded-2xl border border-border bg-white p-5 shadow-xl"
+                >
+                  <p className="mb-3 text-xs font-bold uppercase tracking-wider text-muted">
+                    Buscar repuestos por categoría
+                  </p>
+                  <div className="grid grid-cols-3 gap-1">
+                    {PARTS_MENU_CATEGORIES.map((category) => (
+                      <Link
+                        key={category.value}
+                        role="menuitem"
+                        to={categorySearchUrl(category.value)}
+                        onClick={() => setPartsMenuOpen(false)}
+                        className="rounded-lg px-3 py-2 text-sm font-medium text-petrol-dark transition-colors hover:bg-bg hover:text-orange"
+                      >
+                        {category.label}
+                      </Link>
+                    ))}
+                  </div>
+                  <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
+                    <Link
+                      role="menuitem"
+                      to="/buscar?tipo=part"
+                      onClick={() => setPartsMenuOpen(false)}
+                      className="text-sm font-bold text-petrol hover:text-orange"
+                    >
+                      Ver todos los repuestos →
+                    </Link>
+                    <Link
+                      role="menuitem"
+                      to="/buscar?tipo=accessory"
+                      onClick={() => setPartsMenuOpen(false)}
+                      className="text-sm font-semibold text-muted hover:text-orange"
+                    >
+                      Accesorios
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+            {links.map((link) =>
+              link.to ? (
+                <motion.div variants={fadeDown} key={link.label}>
+                  <Link
+                    to={link.to}
+                    className="text-sm font-medium transition-colors hover:opacity-80"
+                    style={{ color: "#102A36" }}
+                  >
+                    {link.label}
+                  </Link>
+                </motion.div>
+              ) : (
+                <motion.a
+                  variants={fadeDown}
+                  key={link.label}
+                  href={link.href}
+                  className="text-sm font-medium transition-colors hover:opacity-80"
+                  style={{ color: "#102A36" }}
+                >
+                  {link.label}
+                </motion.a>
+              ),
+            )}
           </motion.nav>
 
           {/* Desktop actions */}
@@ -785,16 +898,78 @@ function Navbar() {
             style={{ borderColor: "#DCE3E6" }}
           >
             <nav className="flex flex-col gap-1 mb-4">
-              {links.map((l) => (
-                <a
-                  key={l}
-                  href="#"
-                  className="px-3 py-2.5 rounded-lg text-sm font-medium"
-                  style={{ color: "#102A36" }}
+              <button
+                type="button"
+                aria-expanded={mobilePartsOpen}
+                aria-controls="mobile-parts-menu"
+                onClick={() => setMobilePartsOpen((current) => !current)}
+                className="flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium text-petrol-dark"
+              >
+                Repuestos
+                <span
+                  className={`transition-transform ${
+                    mobilePartsOpen ? "rotate-180" : ""
+                  }`}
                 >
-                  {l}
-                </a>
-              ))}
+                  <IconChevronDown />
+                </span>
+              </button>
+              {mobilePartsOpen && (
+                <div
+                  id="mobile-parts-menu"
+                  className="mx-3 mb-2 grid grid-cols-1 gap-1 border-l-2 border-orange/30 pl-3"
+                >
+                  {PARTS_MENU_CATEGORIES.map((category) => (
+                    <Link
+                      key={category.value}
+                      to={categorySearchUrl(category.value)}
+                      onClick={() => {
+                        setMobilePartsOpen(false)
+                        setMobileOpen(false)
+                      }}
+                      className="rounded-lg px-2 py-2 text-sm text-petrol-dark hover:bg-bg"
+                    >
+                      {category.label}
+                    </Link>
+                  ))}
+                  <Link
+                    to="/buscar?tipo=part"
+                    onClick={() => setMobileOpen(false)}
+                    className="rounded-lg px-2 py-2 text-sm font-bold text-petrol"
+                  >
+                    Ver todos los repuestos
+                  </Link>
+                  <Link
+                    to="/buscar?tipo=accessory"
+                    onClick={() => setMobileOpen(false)}
+                    className="rounded-lg px-2 py-2 text-sm font-semibold text-muted"
+                  >
+                    Accesorios
+                  </Link>
+                </div>
+              )}
+              {links.map((link) =>
+                link.to ? (
+                  <Link
+                    key={link.label}
+                    to={link.to}
+                    onClick={() => setMobileOpen(false)}
+                    className="px-3 py-2.5 rounded-lg text-sm font-medium"
+                    style={{ color: "#102A36" }}
+                  >
+                    {link.label}
+                  </Link>
+                ) : (
+                  <a
+                    key={link.label}
+                    href={link.href}
+                    className="px-3 py-2.5 rounded-lg text-sm font-medium"
+                    style={{ color: "#102A36" }}
+                  >
+                    {link.label}
+                  </a>
+                ),
+              )}
             </nav>
             {user && (
               <div className="mx-3 mb-3 rounded-xl bg-bg p-3">
@@ -1253,21 +1428,45 @@ function Hero() {
 // ─── Categories ───────────────────────────────────────────────────────────────
 
 const CATEGORIES = [
-  { name: "Motor y transmisión", Icon: CatEngine },
+  {
+    name: "Motor y transmisión",
+    to: categorySearchUrl(LISTING_CATEGORY_VALUES.motor),
+    Icon: CatEngine,
+  },
 
-  { name: "Carrocería", Icon: CatBody },
+  {
+    name: "Carrocería",
+    to: categorySearchUrl(LISTING_CATEGORY_VALUES.body),
+    Icon: CatBody,
+  },
 
-  { name: "Suspensión y dirección", Icon: CatSuspension },
+  {
+    name: "Suspensión y dirección",
+    to: categorySearchUrl(LISTING_CATEGORY_VALUES.suspension),
+    Icon: CatSuspension,
+  },
 
-  { name: "Frenos", Icon: CatBrakes },
+  {
+    name: "Frenos",
+    to: categorySearchUrl(LISTING_CATEGORY_VALUES.brakes),
+    Icon: CatBrakes,
+  },
 
-  { name: "Electricidad e iluminación", Icon: CatElectric },
+  {
+    name: "Electricidad e iluminación",
+    to: categorySearchUrl(LISTING_CATEGORY_VALUES.electricity),
+    Icon: CatElectric,
+  },
 
-  { name: "Neumáticos y llantas", Icon: CatTires },
+  {
+    name: "Neumáticos y llantas",
+    to: categorySearchUrl(LISTING_CATEGORY_VALUES.tires),
+    Icon: CatTires,
+  },
 
-  { name: "Accesorios", Icon: CatAccessories },
+  { name: "Accesorios", to: "/buscar?tipo=accessory", Icon: CatAccessories },
 
-  { name: "Vehículos", Icon: CatVehicles },
+  { name: "Vehículos", to: "/buscar?tipo=vehicle", Icon: CatVehicles },
 ]
 
 function Categories() {
@@ -1288,31 +1487,37 @@ function Categories() {
           ¿Qué estás buscando?
         </h2>
         <StaggerGroup className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-          {CATEGORIES.map(({ name, Icon }) => (
-            <motion.button
+          {CATEGORIES.map(({ name, to, Icon }) => (
+            <motion.div
               variants={cardEntrance}
               whileHover={{ y: -4 }}
               whileTap={{ scale: 0.98 }}
               key={name}
-              className="animated-card group flex flex-col items-center gap-3 p-4 rounded-2xl border text-center transition-[box-shadow,border-color] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange/30"
+              className="animated-card group rounded-2xl border text-center transition-[box-shadow,border-color] hover:shadow-md"
               style={{ borderColor: "#DCE3E6", background: "#F7F9FA" }}
             >
-              <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center transition-colors group-hover:bg-opacity-90"
-                style={{ background: "#E8F0F3", color: "#123B4A" }}
+              <Link
+                to={to}
+                className="flex h-full cursor-pointer flex-col items-center gap-3 rounded-2xl p-4 focus:outline-none focus:ring-2 focus:ring-orange/30"
+                aria-label={`Ver ${name}`}
               >
-                <Icon />
-              </div>
-              <span
-                className="text-xs font-semibold leading-tight"
-                style={{ color: "#102A36" }}
-              >
-                {name}
-              </span>
-              <span style={{ color: "#64757D" }}>
-                <IconChevronRight />
-              </span>
-            </motion.button>
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center transition-colors group-hover:bg-opacity-90"
+                  style={{ background: "#E8F0F3", color: "#123B4A" }}
+                >
+                  <Icon />
+                </div>
+                <span
+                  className="text-xs font-semibold leading-tight"
+                  style={{ color: "#102A36" }}
+                >
+                  {name}
+                </span>
+                <span style={{ color: "#64757D" }}>
+                  <IconChevronRight />
+                </span>
+              </Link>
+            </motion.div>
           ))}
         </StaggerGroup>
       </div>

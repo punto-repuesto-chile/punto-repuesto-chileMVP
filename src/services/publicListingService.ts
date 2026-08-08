@@ -55,8 +55,11 @@ export type PublishedListingsOptions = {
 
 export type PublicListingSort = "recientes" | "precio_asc" | "precio_desc"
 
+export const PUBLIC_LISTINGS_PAGE_SIZE = 12
+
 export type SearchPublishedListingsOptions = {
   query?: string
+  listingType?: PublicListingType
   category?: string
   brand?: string
   model?: string
@@ -66,6 +69,15 @@ export type SearchPublishedListingsOptions = {
   minPrice?: number
   maxPrice?: number
   sort?: PublicListingSort
+  page?: number
+}
+
+export type PaginatedPublicListings = {
+  items: PublicListingCard[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
 }
 
 export type PublicListingFilterOptions = {
@@ -82,24 +94,19 @@ export class PublicListingsQueryError extends Error {
   }
 }
 
-const SEARCHABLE_COLUMNS = [
-  "title",
-  "category",
-  "vehicle_brand",
-  "vehicle_model",
-  "oem_code",
-  "region",
-  "commune",
-] as const
-
 function normalizeSearchTerm(term: string): string {
-  return term.trim().replace(/\s+/g, " ")
+  return term
+    .normalize("NFKD")
+    .replace(/\p{M}/gu, "")
+    .toLocaleLowerCase("es-CL")
+    .trim()
+    .replace(/\s+/g, " ")
 }
 
 function searchableWords(term: string): string[] {
   return normalizeSearchTerm(term)
     .split(" ")
-    .map((word) => word.replace(/[,()*%\"]/g, ""))
+    .map((word) => word.replace(/[,()*%_\"]/g, ""))
     .filter(Boolean)
 }
 
@@ -170,14 +177,18 @@ export async function getPublishedListings({
 
 export async function searchPublishedListings(
   options: SearchPublishedListingsOptions = {},
-): Promise<PublicListingCard[]> {
+): Promise<PaginatedPublicListings> {
   const words = searchableWords(options.query ?? "")
   const sort = options.sort ?? "recientes"
+  const page = options.page ?? 1
+  const from = (page - 1) * PUBLIC_LISTINGS_PAGE_SIZE
+  const to = from + PUBLIC_LISTINGS_PAGE_SIZE - 1
 
   let query = supabase
     .from("listings")
     .select(
       "id,listing_type,title,category,condition,price,stock,vehicle_brand,vehicle_model,year_from,year_to,region,commune,created_at,listing_images(storage_path,position,is_primary)",
+      { count: "exact" },
     )
     .eq("status", "published")
     .order("is_primary", {
@@ -196,10 +207,9 @@ export async function searchPublishedListings(
   else query = query.order("created_at", { ascending: false })
 
   for (const word of words)
-    query = query.or(
-      SEARCHABLE_COLUMNS.map((column) => `${column}.ilike.*${word}*`).join(","),
-    )
+    query = query.ilike("search_normalized", `%${word}%`)
 
+  if (options.listingType) query = query.eq("listing_type", options.listingType)
   if (options.category) query = query.eq("category", options.category)
   if (options.brand) query = query.eq("vehicle_brand", options.brand)
   if (options.model) query = query.eq("vehicle_model", options.model)
@@ -214,19 +224,73 @@ export async function searchPublishedListings(
   if (options.maxPrice !== undefined)
     query = query.lte("price", options.maxPrice)
 
-  const { data, error } = await query
+  query = query.range(from, to)
+
+  const { data, error, count } = await query
   if (error) {
+    if (error.code === "PGRST103") {
+      let countQuery = supabase
+        .from("listings")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "published")
+
+      for (const word of words)
+        countQuery = countQuery.ilike("search_normalized", `%${word}%`)
+      if (options.listingType)
+        countQuery = countQuery.eq("listing_type", options.listingType)
+      if (options.category)
+        countQuery = countQuery.eq("category", options.category)
+      if (options.brand)
+        countQuery = countQuery.eq("vehicle_brand", options.brand)
+      if (options.model)
+        countQuery = countQuery.eq("vehicle_model", options.model)
+      if (options.region)
+        countQuery = countQuery.ilike("region", `%${options.region}%`)
+      if (options.condition)
+        countQuery = countQuery.eq("condition", options.condition)
+      if (options.year) {
+        countQuery = countQuery.or(
+          `year_from.is.null,year_from.lte.${options.year}`,
+        )
+        countQuery = countQuery.or(
+          `year_to.is.null,year_to.gte.${options.year}`,
+        )
+      }
+      if (options.minPrice !== undefined)
+        countQuery = countQuery.gte("price", options.minPrice)
+      if (options.maxPrice !== undefined)
+        countQuery = countQuery.lte("price", options.maxPrice)
+
+      const { count: fallbackCount, error: countError } = await countQuery
+      if (!countError) {
+        const total = fallbackCount ?? 0
+        return {
+          items: [],
+          total,
+          page,
+          pageSize: PUBLIC_LISTINGS_PAGE_SIZE,
+          totalPages: Math.ceil(total / PUBLIC_LISTINGS_PAGE_SIZE),
+        }
+      }
+    }
+
     if (import.meta.env.DEV)
-      console.error("No se pudo buscar en el catálogo público:", {
-        code: error.code,
-        message: error.message,
-      })
+      console.error(
+        `No se pudo buscar en el catálogo público (${error.code}): ${error.message}`,
+      )
     throw new PublicListingsQueryError("No pudimos cargar los resultados.")
   }
 
-  return ((data ?? []) as unknown as PublicListingCardRow[]).map(
-    mapPublicListingCard,
-  )
+  const total = count ?? 0
+  return {
+    items: ((data ?? []) as unknown as PublicListingCardRow[]).map(
+      mapPublicListingCard,
+    ),
+    total,
+    page,
+    pageSize: PUBLIC_LISTINGS_PAGE_SIZE,
+    totalPages: Math.ceil(total / PUBLIC_LISTINGS_PAGE_SIZE),
+  }
 }
 
 type PublicFilterOptionsRow = {

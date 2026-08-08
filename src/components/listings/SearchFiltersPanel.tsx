@@ -1,9 +1,11 @@
 import type {
   PublicListingCondition,
   PublicListingFilterOptions,
+  PublicListingType,
 } from "../../services/publicListingService"
 
 export type SearchFiltersDraft = {
+  listingType: "" | PublicListingType
   category: string
   brand: string
   model: string
@@ -13,6 +15,16 @@ export type SearchFiltersDraft = {
   minPrice: string
   maxPrice: string
 }
+
+const LISTING_TYPE_OPTIONS: Array<{
+  value: PublicListingType
+  label: string
+}> = [
+  { value: "part", label: "Repuestos" },
+  { value: "accessory", label: "Accesorios" },
+  { value: "vehicle", label: "Vehículos" },
+  { value: "salvage_inventory", label: "Inventario de desarme" },
+]
 
 const CONDITION_OPTIONS: Array<{
   value: PublicListingCondition
@@ -63,6 +75,28 @@ export default function SearchFiltersPanel({
       </div>
 
       <div className="flex-1 space-y-4 overflow-y-auto px-5 py-5 lg:overflow-visible lg:px-0 lg:py-3">
+        <label className="block text-xs font-bold text-petrol-dark">
+          Tipo de publicación
+          <select
+            value={draft.listingType}
+            onChange={(event) =>
+              onChange({
+                ...draft,
+                listingType: event.target
+                  .value as SearchFiltersDraft["listingType"],
+              })
+            }
+            className={selectClass}
+          >
+            <option value="">Todos</option>
+            {LISTING_TYPE_OPTIONS.map((type) => (
+              <option key={type.value} value={type.value}>
+                {type.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
         <label className="block text-xs font-bold text-petrol-dark">
           Categoría
           <select
