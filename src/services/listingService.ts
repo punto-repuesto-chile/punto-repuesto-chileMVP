@@ -70,6 +70,8 @@ export type PublishedListingImage = {
 export type PublishedListing = {
   id: string
 
+  sellerId: string
+
   title: string
 
   description: string
@@ -129,6 +131,8 @@ type PublishedListingImageRow = {
 
 type PublishedListingRow = {
   id: string
+
+  seller_id: string
 
   title: string
 
@@ -655,7 +659,7 @@ export async function getPublishedListingById(
     .from("listings")
 
     .select(
-      "id,title,description,category,condition,price,stock,vehicle_brand,vehicle_model,year_from,year_to,engine_version,oem_code,region,commune,delivery_methods,contact_name,contact_phone,allow_whatsapp,created_at,listing_images(id,storage_path,position,is_primary)",
+      "id,seller_id,title,description,category,condition,price,stock,vehicle_brand,vehicle_model,year_from,year_to,engine_version,oem_code,region,commune,delivery_methods,contact_name,contact_phone,allow_whatsapp,created_at,listing_images(id,storage_path,position,is_primary)",
     )
 
     .eq("id", listingId)
@@ -693,6 +697,8 @@ export async function getPublishedListingById(
 
   return {
     id: row.id,
+
+    sellerId: row.seller_id,
 
     title: row.title,
 

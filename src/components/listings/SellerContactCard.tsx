@@ -14,12 +14,16 @@ export default function SellerContactCard({
   phone,
 
   allowWhatsapp,
+
+  sellerId,
 }: {
   name: string
 
   phone: string
 
   allowWhatsapp: boolean
+
+  sellerId: string
 }) {
   const whatsappPhone = sanitizePhoneForWhatsapp(phone)
 
@@ -33,6 +37,12 @@ export default function SellerContactCard({
       <h2 className="mt-2 font-display text-xl font-bold">{name}</h2>
       <p className="mt-2 text-sm text-white/65">{phone}</p>
       <div className="mt-5 grid gap-3">
+        <Link
+          to={`/vendedor/${sellerId}`}
+          className="rounded-xl bg-orange px-4 py-3 text-center text-sm font-bold text-white transition hover:bg-orange-dark"
+        >
+          Ver perfil del vendedor
+        </Link>
         {allowWhatsapp && whatsappPhone && (
           <a
             href={`https://wa.me/${whatsappPhone}`}
@@ -55,3 +65,5 @@ export default function SellerContactCard({
     </aside>
   )
 }
+
+import { Link } from "react-router-dom"
