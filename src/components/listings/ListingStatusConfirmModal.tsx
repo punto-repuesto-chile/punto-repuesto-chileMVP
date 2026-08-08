@@ -1,51 +1,76 @@
 import { useEffect, useRef } from "react"
+
 import { createPortal } from "react-dom"
+
 import type { OwnedListingAction } from "../../services/listingService"
 
 const CONTENT: Record<OwnedListingAction, {
   title: string
+
   description: string
+
   confirmLabel: string
 }> = {
   paused: {
     title: "¿Quieres pausar esta publicación?",
+
     description:
       "Dejará de ser visible públicamente hasta que vuelvas a publicarla.",
+
     confirmLabel: "Pausar publicación",
   },
+
   published: {
     title: "¿Quieres volver a publicar este producto?",
+
     description: "La publicación volverá a estar disponible públicamente.",
+
     confirmLabel: "Volver a publicar",
   },
+
   sold: {
     title: "¿Confirmas que este producto fue vendido?",
+
     description: "La publicación dejará de estar disponible públicamente.",
+
     confirmLabel: "Marcar como vendida",
   },
+
   delete: {
     title: "¿Eliminar esta publicación?",
+
     description:
       "Esta acción eliminará permanentemente la publicación y sus imágenes. No podrás recuperarla.",
+
     confirmLabel: "Eliminar publicación",
   },
 }
 
 export default function ListingStatusConfirmModal({
   targetStatus,
+
   isSubmitting,
+
   error,
+
   onCancel,
+
   onConfirm,
 }: {
   targetStatus: OwnedListingAction
+
   isSubmitting: boolean
+
   error?: string | null
+
   onCancel: () => void
+
   onConfirm: () => void
 }) {
   const cancelButtonRef = useRef<HTMLButtonElement>(null)
+
   const onCancelRef = useRef(onCancel)
+
   const content = CONTENT[targetStatus]
 
   useEffect(() => {
@@ -54,10 +79,13 @@ export default function ListingStatusConfirmModal({
 
   useEffect(() => {
     cancelButtonRef.current?.focus()
+
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") onCancelRef.current()
     }
+
     document.addEventListener("keydown", closeOnEscape)
+
     return () => document.removeEventListener("keydown", closeOnEscape)
   }, [])
 
@@ -133,6 +161,7 @@ export default function ListingStatusConfirmModal({
         </div>
       </div>
     </div>,
+
     document.body,
   )
 }

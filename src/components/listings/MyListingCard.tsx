@@ -1,29 +1,39 @@
 import { Link } from "react-router-dom"
+
 import type {
   MyListing,
   OwnedListingAction,
 } from "../../services/listingService"
+
 import ListingStatusBadge from "./ListingStatusBadge"
 
 const PRICE_FORMATTER = new Intl.NumberFormat("es-CL", {
   style: "currency",
+
   currency: "CLP",
+
   maximumFractionDigits: 0,
 })
 
 const DATE_FORMATTER = new Intl.DateTimeFormat("es-CL", {
   day: "numeric",
+
   month: "short",
+
   year: "numeric",
 })
 
 export default function MyListingCard({
   listing,
+
   isUpdating,
+
   onRequestAction,
 }: {
   listing: MyListing
+
   isUpdating: boolean
+
   onRequestAction: (listingId: string, action: OwnedListingAction) => void
 }) {
   return (
@@ -132,6 +142,7 @@ export default function MyListingCard({
                     type="button"
                     onClick={(event) => {
                       event.stopPropagation()
+
                       onRequestAction(listing.id, "paused")
                     }}
                     className="cursor-pointer rounded-lg border border-amber-300 px-4 py-2 text-xs font-bold text-amber-700 transition hover:bg-amber-50"
@@ -144,6 +155,7 @@ export default function MyListingCard({
                     type="button"
                     onClick={(event) => {
                       event.stopPropagation()
+
                       onRequestAction(listing.id, "published")
                     }}
                     className="cursor-pointer rounded-lg border border-emerald-300 px-4 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-50"
@@ -157,6 +169,7 @@ export default function MyListingCard({
                     type="button"
                     onClick={(event) => {
                       event.stopPropagation()
+
                       onRequestAction(listing.id, "sold")
                     }}
                     className="cursor-pointer rounded-lg border border-blue-300 px-4 py-2 text-xs font-bold text-blue-700 transition hover:bg-blue-50"
@@ -168,6 +181,7 @@ export default function MyListingCard({
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation()
+
                     onRequestAction(listing.id, "delete")
                   }}
                   className="cursor-pointer rounded-lg border border-red-300 px-4 py-2 text-xs font-bold text-red-700 transition hover:bg-red-50"

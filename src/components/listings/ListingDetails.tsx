@@ -5,19 +5,25 @@ import type {
 
 const PRICE_FORMATTER = new Intl.NumberFormat("es-CL", {
   style: "currency",
+
   currency: "CLP",
+
   maximumFractionDigits: 0,
 })
 
 const DATE_FORMATTER = new Intl.DateTimeFormat("es-CL", {
   day: "numeric",
+
   month: "long",
+
   year: "numeric",
 })
 
 const CONDITION_LABELS: Record<ListingCondition, string> = {
   new: "Nuevo",
+
   used: "Usado",
+
   refurbished: "Reacondicionado",
 }
 

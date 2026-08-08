@@ -6,6 +6,7 @@ export default function PublishHeader({
   label?: string
 }) {
   const navigate = useNavigate()
+
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-white/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-6">

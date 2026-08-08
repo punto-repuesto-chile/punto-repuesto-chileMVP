@@ -1,12 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react"
+
 import { Link } from "react-router-dom"
+
 import ListingStatusConfirmModal from "../components/listings/ListingStatusConfirmModal"
+
 import MyListingCard from "../components/listings/MyListingCard"
+
 import MyListingsEmptyState from "../components/listings/MyListingsEmptyState"
+
 import MyListingsFilters, {
   type ListingsFilter,
 } from "../components/listings/MyListingsFilters"
+
 import MyListingsSkeleton from "../components/listings/MyListingsSkeleton"
+
 import {
   deleteOwnedListing,
   getMyListings,
@@ -22,41 +29,59 @@ const STATUSES: ListingStatus[] = ["published", "draft", "paused", "sold"]
 
 type PendingAction = {
   listingId: string
+
   action: OwnedListingAction
 }
 
 export default function MyListingsPage() {
   const [listings, setListings] = useState<MyListing[]>([])
+
   const [activeFilter, setActiveFilter] = useState<ListingsFilter>("all")
+
   const [isLoading, setIsLoading] = useState(true)
+
   const [error, setError] = useState<string | null>(null)
+
   const [actionError, setActionError] = useState<string | null>(null)
+
   const [actionNotice, setActionNotice] = useState<string | null>(null)
+
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
+
   const actionLockRef = useRef(false)
+
   const [updatingListingIds, setUpdatingListingIds] = useState<Set<string>>(
     () => new Set(),
   )
+
   const [requestNumber, setRequestNumber] = useState(0)
 
   useEffect(() => {
     let active = true
+
     setIsLoading(true)
+
     setError(null)
 
     void getMyListings()
+
       .then((result) => {
         if (active) setListings(result)
       })
+
       .catch((requestError: unknown) => {
         if (!active) return
+
         const message =
           requestError instanceof Error
             ? requestError.message
             : "No pudimos cargar tus publicaciones."
+
         console.error("Error al cargar publicaciones:", message)
+
         setError(message)
       })
+
       .finally(() => {
         if (active) setIsLoading(false)
       })
@@ -69,15 +94,21 @@ export default function MyListingsPage() {
   const counts = useMemo(() => {
     const result: Record<ListingsFilter, number> = {
       all: listings.length,
+
       published: 0,
+
       draft: 0,
+
       paused: 0,
+
       sold: 0,
     }
+
     for (const status of STATUSES)
       result[status] = listings.filter(
         (listing) => listing.status === status,
       ).length
+
     return result
   }, [listings])
 
@@ -86,23 +117,30 @@ export default function MyListingsPage() {
       activeFilter === "all"
         ? listings
         : listings.filter((listing) => listing.status === activeFilter),
+
     [activeFilter, listings],
   )
 
   const changeListingStatus = async (
     listingId: string,
+
     status: OwnedListingStatusUpdate,
   ): Promise<boolean> => {
     if (updatingListingIds.has(listingId)) return false
+
     setUpdatingListingIds((current) => new Set(current).add(listingId))
+
     setActionError(null)
+
     try {
       const updatedListing = await updateOwnedListingStatus(listingId, status)
+
       setListings((current) =>
         current.map((listing) =>
           listing.id === listingId ? updatedListing : listing,
         ),
       )
+
       return true
     } catch (requestError) {
       setActionError(
@@ -110,11 +148,14 @@ export default function MyListingsPage() {
           ? requestError.message
           : "No pudimos actualizar la publicación. Inténtalo nuevamente.",
       )
+
       return false
     } finally {
       setUpdatingListingIds((current) => {
         const next = new Set(current)
+
         next.delete(listingId)
+
         return next
       })
     }
@@ -122,28 +163,36 @@ export default function MyListingsPage() {
 
   const requestAction = (listingId: string, action: OwnedListingAction) => {
     setActionError(null)
+
     setPendingAction({ listingId, action })
   }
 
   const confirmPendingAction = async () => {
     if (!pendingAction || actionLockRef.current) return
+
     actionLockRef.current = true
+
     try {
       if (pendingAction.action === "delete") {
         setUpdatingListingIds((current) =>
           new Set(current).add(pendingAction.listingId),
         )
+
         setActionError(null)
+
         try {
           const result = await deleteOwnedListing(pendingAction.listingId)
+
           setListings((current) =>
             current.filter((listing) => listing.id !== pendingAction.listingId),
           )
+
           setActionNotice(
             result.storageCleanupFailed
               ? "La publicación fue eliminada, pero quedaron archivos pendientes de limpieza."
               : "Publicación eliminada correctamente.",
           )
+
           setPendingAction(null)
         } catch (requestError) {
           setActionError(
@@ -154,16 +203,22 @@ export default function MyListingsPage() {
         } finally {
           setUpdatingListingIds((current) => {
             const next = new Set(current)
+
             next.delete(pendingAction.listingId)
+
             return next
           })
         }
+
         return
       }
+
       const succeeded = await changeListingStatus(
         pendingAction.listingId,
+
         pendingAction.action,
       )
+
       if (succeeded) setPendingAction(null)
     } finally {
       actionLockRef.current = false

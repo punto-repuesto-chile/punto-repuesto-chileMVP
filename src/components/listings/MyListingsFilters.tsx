@@ -4,24 +4,33 @@ export type ListingsFilter = "all" | ListingStatus
 
 type FilterOption = {
   value: ListingsFilter
+
   label: string
 }
 
 const FILTERS: FilterOption[] = [
   { value: "all", label: "Todas" },
+
   { value: "published", label: "Publicadas" },
+
   { value: "draft", label: "Borradores" },
+
   { value: "paused", label: "Pausadas" },
+
   { value: "sold", label: "Vendidas" },
 ]
 
 export default function MyListingsFilters({
   activeFilter,
+
   counts,
+
   onChange,
 }: {
   activeFilter: ListingsFilter
+
   counts: Record<ListingsFilter, number>
+
   onChange: (filter: ListingsFilter) => void
 }) {
   return (
@@ -32,6 +41,7 @@ export default function MyListingsFilters({
     >
       {FILTERS.map((filter) => {
         const active = activeFilter === filter.value
+
         return (
           <button
             key={filter.value}

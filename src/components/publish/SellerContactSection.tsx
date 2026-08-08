@@ -3,19 +3,26 @@ import type {
   PublicationFormData,
   SetPublicationField,
 } from "../../types/publication"
+
 import FormSection, { FieldError, fieldClass } from "./FormSection"
 
 type Props = {
   data: PublicationFormData
+
   errors: PublicationErrors
+
   setField: SetPublicationField
+
   disableEmail?: boolean
 }
 
 export default function SellerContactSection({
   data,
+
   errors,
+
   setField,
+
   disableEmail = false,
 }: Props) {
   return (

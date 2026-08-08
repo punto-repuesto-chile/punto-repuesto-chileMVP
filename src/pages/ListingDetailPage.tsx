@@ -1,12 +1,21 @@
 import { useEffect, useState } from "react"
+
 import { Link, useParams } from "react-router-dom"
+
 import SiteFooter from "../components/layout/SiteFooter"
+
 import ListingCompatibility from "../components/listings/ListingCompatibility"
+
 import ListingDelivery from "../components/listings/ListingDelivery"
+
 import ListingDetails from "../components/listings/ListingDetails"
+
 import ListingDetailSkeleton from "../components/listings/ListingDetailSkeleton"
+
 import ListingGallery from "../components/listings/ListingGallery"
+
 import SellerContactCard from "../components/listings/SellerContactCard"
+
 import {
   getPublishedListingById,
   type PublishedListing,
@@ -14,38 +23,56 @@ import {
 
 export default function ListingDetailPage() {
   const { id = "" } = useParams<{ id: string }>()
+
   const [listing, setListing] = useState<PublishedListing | null>(null)
+
   const [isLoading, setIsLoading] = useState(true)
+
   const [notFound, setNotFound] = useState(false)
+
   const [error, setError] = useState<string | null>(null)
+
   const [requestNumber, setRequestNumber] = useState(0)
 
   useEffect(() => {
     let active = true
+
     setIsLoading(true)
+
     setNotFound(false)
+
     setError(null)
 
     void getPublishedListingById(id)
+
       .then((result) => {
         if (!active) return
+
         if (!result) {
           setListing(null)
+
           setNotFound(true)
+
           return
         }
+
         setListing(result)
       })
+
       .catch((requestError: unknown) => {
         if (!active) return
+
         const message =
           requestError instanceof Error
             ? requestError.message
             : "No pudimos cargar esta publicación."
+
         if (import.meta.env.DEV)
           console.error("Error al cargar el detalle:", message)
+
         setError(message)
       })
+
       .finally(() => {
         if (active) setIsLoading(false)
       })

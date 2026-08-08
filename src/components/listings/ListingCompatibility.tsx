@@ -16,9 +16,13 @@ export default function ListingCompatibility({
 
   const rows = [
     ["Marca", listing.vehicleBrand],
+
     ["Modelo", listing.vehicleModel],
+
     ["Años", years],
+
     ["Motorización", listing.engineVersion],
+
     ["Código OEM", listing.oemCode],
   ].filter((row): row is [string, string] => Boolean(row[1]))
 

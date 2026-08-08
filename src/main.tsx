@@ -1,15 +1,27 @@
 import React from "react"
+
 import ReactDOM from "react-dom/client"
+
 import { BrowserRouter, Route, Routes } from "react-router-dom"
+
 import App from "./App"
+
 import ProtectedRoute from "./components/auth/ProtectedRoute"
+
 import { AuthProvider } from "./context/AuthContext"
+
 import EditListingPage from "./pages/EditListingPage"
+
 import LoginPage from "./pages/LoginPage"
+
 import ListingDetailPage from "./pages/ListingDetailPage"
+
 import MyListingsPage from "./pages/MyListingsPage"
+
 import PublishProductPage from "./pages/PublishProductPage"
+
 import RegisterPage from "./pages/RegisterPage"
+
 import "./index.css"
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

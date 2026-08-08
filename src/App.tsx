@@ -1,5 +1,6 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
+
 import {
   MotionConfig,
   motion,
@@ -7,6 +8,7 @@ import {
   useReducedMotion,
   useScroll,
 } from "motion/react"
+
 import {
   cardEntrance,
   fadeDown,
@@ -17,16 +19,60 @@ import {
   staggerHeader,
   viewportOnce,
 } from "./animations/variants"
+
 import { StaggerGroup } from "./components/animation/Reveal"
+import PublicListingCard from "./components/listings/PublicListingCard"
+import PublicListingsSkeleton from "./components/listings/PublicListingsSkeleton"
 import { useAuth } from "./context/AuthContext"
+import { DESARMADURAS, type Desarmaduria } from "./data/marketplace"
 import {
-  DESARMADURAS,
-  PRODUCTS,
-  VEHICLES,
-  type Desarmaduria,
-  type Product,
-  type Vehicle,
-} from "./data/marketplace"
+  getPublishedListings,
+  type PublicListingCard as PublicListingCardData,
+  type PublicListingType,
+} from "./services/publicListingService"
+
+function usePublishedListingSection(
+  listingTypes: PublicListingType[],
+  limit: number,
+) {
+  const [listings, setListings] = useState<PublicListingCardData[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [requestNumber, setRequestNumber] = useState(0)
+
+  useEffect(() => {
+    let active = true
+    setIsLoading(true)
+    setError(null)
+
+    void getPublishedListings({ listingTypes, limit })
+      .then((result) => {
+        if (active) setListings(result)
+      })
+      .catch((requestError: unknown) => {
+        if (!active) return
+        setError(
+          requestError instanceof Error
+            ? requestError.message
+            : "No pudimos cargar estas publicaciones.",
+        )
+      })
+      .finally(() => {
+        if (active) setIsLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [limit, requestNumber])
+
+  return {
+    listings,
+    isLoading,
+    error,
+    retry: () => setRequestNumber((current) => current + 1),
+  }
+}
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
@@ -47,6 +93,7 @@ function IconSearch() {
     </svg>
   )
 }
+
 function IconHeart({ filled = false }: { filled?: boolean }) {
   return (
     <svg
@@ -63,6 +110,7 @@ function IconHeart({ filled = false }: { filled?: boolean }) {
     </svg>
   )
 }
+
 function IconChevronRight() {
   return (
     <svg
@@ -79,6 +127,7 @@ function IconChevronRight() {
     </svg>
   )
 }
+
 function IconChevronDown() {
   return (
     <svg
@@ -95,6 +144,7 @@ function IconChevronDown() {
     </svg>
   )
 }
+
 function IconMenu() {
   return (
     <svg
@@ -113,6 +163,7 @@ function IconMenu() {
     </svg>
   )
 }
+
 function IconX() {
   return (
     <svg
@@ -130,6 +181,7 @@ function IconX() {
     </svg>
   )
 }
+
 function IconShield() {
   return (
     <svg
@@ -146,6 +198,7 @@ function IconShield() {
     </svg>
   )
 }
+
 function IconCheck() {
   return (
     <svg
@@ -162,6 +215,7 @@ function IconCheck() {
     </svg>
   )
 }
+
 function IconMapPin() {
   return (
     <svg
@@ -179,6 +233,7 @@ function IconMapPin() {
     </svg>
   )
 }
+
 function IconStar() {
   return (
     <svg
@@ -214,6 +269,7 @@ function CatEngine() {
     </svg>
   )
 }
+
 function CatBody() {
   return (
     <svg
@@ -232,6 +288,7 @@ function CatBody() {
     </svg>
   )
 }
+
 function CatSuspension() {
   return (
     <svg
@@ -251,6 +308,7 @@ function CatSuspension() {
     </svg>
   )
 }
+
 function CatBrakes() {
   return (
     <svg
@@ -272,6 +330,7 @@ function CatBrakes() {
     </svg>
   )
 }
+
 function CatElectric() {
   return (
     <svg
@@ -288,6 +347,7 @@ function CatElectric() {
     </svg>
   )
 }
+
 function CatTires() {
   return (
     <svg
@@ -305,6 +365,7 @@ function CatTires() {
     </svg>
   )
 }
+
 function CatAccessories() {
   return (
     <svg
@@ -322,6 +383,7 @@ function CatAccessories() {
     </svg>
   )
 }
+
 function CatVehicles() {
   return (
     <svg
@@ -360,6 +422,7 @@ function IconBookOpen() {
     </svg>
   )
 }
+
 function IconScale() {
   return (
     <svg
@@ -380,6 +443,7 @@ function IconScale() {
     </svg>
   )
 }
+
 function IconMessageCircle() {
   return (
     <svg
@@ -406,6 +470,7 @@ function IconFacebook() {
     </svg>
   )
 }
+
 function IconInstagram() {
   return (
     <svg
@@ -424,6 +489,7 @@ function IconInstagram() {
     </svg>
   )
 }
+
 function IconTwitter() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -436,17 +502,23 @@ function IconTwitter() {
 
 function Badge({
   label,
+
   variant = "new",
 }: {
   label: string
+
   variant?: "new" | "used" | "verified" | "company"
 }) {
   const styles: Record<string, string> = {
     new: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+
     used: "bg-amber-50 text-amber-700 border border-amber-200",
+
     verified: "text-white",
+
     company: "text-white",
   }
+
   if (variant === "verified") {
     return (
       <span
@@ -457,6 +529,7 @@ function Badge({
       </span>
     )
   }
+
   if (variant === "company") {
     return (
       <span
@@ -467,6 +540,7 @@ function Badge({
       </span>
     )
   }
+
   return (
     <span
       className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${styles[variant]}`}
@@ -480,40 +554,63 @@ function Badge({
 
 function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
+
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+
   const [authNotice, setAuthNotice] = useState("")
+
   const [isScrolled, setIsScrolled] = useState(false)
+
   const [favs] = useState(2)
+
   const { user, signOut } = useAuth()
+
   const navigate = useNavigate()
+
   const { scrollY } = useScroll()
+
   const metadataName = user?.user_metadata.full_name
+
   const displayName =
     typeof metadataName === "string" && metadataName.trim()
       ? metadataName.trim()
       : (user?.email ?? "Usuario")
+
   const initials = displayName
+
     .split(/\s+/)
+
     .slice(0, 2)
+
     .map((part) => part[0]?.toUpperCase())
+
     .join("")
 
   useMotionValueEvent(scrollY, "change", (latest) => setIsScrolled(latest > 24))
 
   const links = ["Repuestos", "Vehículos", "Desarmadurías", "Cómo funciona"]
+
   const showComingSoon = (label: string) => {
     setAuthNotice(`${label} estará disponible próximamente.`)
+
     setUserMenuOpen(false)
   }
+
   const handleLogout = async () => {
     const { error } = await signOut()
+
     if (error) {
       setAuthNotice("No fue posible cerrar la sesión. Inténtalo nuevamente.")
+
       return
     }
+
     setUserMenuOpen(false)
+
     setMobileOpen(false)
+
     setAuthNotice("Sesión cerrada correctamente.")
+
     navigate("/")
   }
 
@@ -777,26 +874,39 @@ function Navbar() {
 
 const QUICK_LINKS = [
   "Motor",
+
   "Parachoques",
+
   "Focos",
+
   "Neumáticos",
+
   "Puertas",
+
   "Accesorios",
 ]
 
 function Hero() {
   const [query, setQuery] = useState("")
+
   const [brand, setBrand] = useState("")
+
   const [model, setModel] = useState("")
+
   const [year, setYear] = useState("")
+
   const [region, setRegion] = useState("")
+
   const reduceMotion = useReducedMotion()
 
   const selectClass =
     "w-full px-3 py-2.5 text-sm rounded-lg border bg-white appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-opacity-40"
+
   const selectStyle = {
     borderColor: "#DCE3E6",
+
     color: "#102A36",
+
     focusRingColor: "#123B4A",
   }
 
@@ -868,7 +978,9 @@ function Hero() {
                   style={
                     {
                       borderColor: "#DCE3E6",
+
                       color: "#102A36",
+
                       "--tw-ring-color": "#123B4A",
                     } as React.CSSProperties
                   }
@@ -880,60 +992,102 @@ function Hero() {
                 {[
                   {
                     value: brand,
+
                     set: setBrand,
+
                     label: "Marca",
+
                     options: [
                       "Toyota",
+
                       "Hyundai",
+
                       "Kia",
+
                       "Chevrolet",
+
                       "Nissan",
+
                       "Suzuki",
+
                       "Mitsubishi",
                     ],
                   },
+
                   {
                     value: model,
+
                     set: setModel,
+
                     label: "Modelo",
+
                     options: [
                       "Yaris",
+
                       "Accent",
+
                       "Rio",
+
                       "Sail",
+
                       "Sentra",
+
                       "Swift",
+
                       "Outlander",
                     ],
                   },
+
                   {
                     value: year,
+
                     set: setYear,
+
                     label: "Año",
+
                     options: [
                       "2024",
+
                       "2023",
+
                       "2022",
+
                       "2021",
+
                       "2020",
+
                       "2019",
+
                       "2018",
+
                       "2017",
+
                       "2016",
+
                       "2015",
                     ],
                   },
+
                   {
                     value: region,
+
                     set: setRegion,
+
                     label: "Región (opcional)",
+
                     options: [
                       "Región Metropolitana",
+
                       "Valparaíso",
+
                       "Bio-Bío",
+
                       "Araucanía",
+
                       "Los Lagos",
+
                       "Antofagasta",
+
                       "Maule",
                     ],
                   },
@@ -945,6 +1099,7 @@ function Hero() {
                       className={selectClass}
                       style={{
                         borderColor: "#DCE3E6",
+
                         color: value ? "#102A36" : "#64757D",
                       }}
                     >
@@ -994,7 +1149,9 @@ function Hero() {
                   className="text-xs px-3 py-1 rounded-full border font-medium transition-colors hover:border-opacity-60"
                   style={{
                     borderColor: "#DCE3E6",
+
                     color: "#123B4A",
+
                     background: "#fff",
                   }}
                 >
@@ -1015,7 +1172,9 @@ function Hero() {
               animate={reduceMotion ? undefined : { y: [0, -4, 0] }}
               transition={{
                 duration: 5.5,
+
                 repeat: Infinity,
+
                 ease: "easeInOut",
               }}
               className="rounded-3xl overflow-hidden shadow-2xl aspect-[4/3]"
@@ -1074,12 +1233,19 @@ function Hero() {
 
 const CATEGORIES = [
   { name: "Motor y transmisión", Icon: CatEngine },
+
   { name: "Carrocería", Icon: CatBody },
+
   { name: "Suspensión y dirección", Icon: CatSuspension },
+
   { name: "Frenos", Icon: CatBrakes },
+
   { name: "Electricidad e iluminación", Icon: CatElectric },
+
   { name: "Neumáticos y llantas", Icon: CatTires },
+
   { name: "Accesorios", Icon: CatAccessories },
+
   { name: "Vehículos", Icon: CatVehicles },
 ]
 
@@ -1133,76 +1299,39 @@ function Categories() {
   )
 }
 
-// ─── Featured Products ────────────────────────────────────────────────────────
+// First catalog version: "featured" means most recently published.
+const PART_LISTING_TYPES: PublicListingType[] = ["part", "accessory"]
+const VEHICLE_LISTING_TYPES: PublicListingType[] = ["vehicle"]
 
-function ProductCard({ p }: { p: Product }) {
-  const [fav, setFav] = useState(false)
+function CatalogSectionMessage({
+  message,
+  onRetry,
+}: {
+  message: string
+  onRetry?: () => void
+}) {
   return (
-    <motion.div
-      variants={cardEntrance}
-      whileHover={{ y: -4 }}
-      className="animated-card bg-white rounded-2xl border overflow-hidden transition-[box-shadow,border-color] hover:shadow-xl group"
-      style={{ borderColor: "#DCE3E6" }}
-    >
-      <div
-        className="relative aspect-[4/3] overflow-hidden"
-        style={{ background: "#E8F0F3" }}
-      >
-        <img
-          src={p.img}
-          alt={p.title}
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-        />
+    <div className="rounded-2xl border border-border bg-white px-6 py-10 text-center shadow-sm">
+      <p className="text-sm font-semibold text-muted">{message}</p>
+      {onRetry && (
         <button
-          onClick={() => setFav((v) => !v)}
-          className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-white shadow flex items-center justify-center transition-colors"
-          style={{ color: fav ? "#F97316" : "#64757D" }}
+          type="button"
+          onClick={onRetry}
+          className="mt-4 rounded-xl bg-petrol px-5 py-2.5 text-sm font-bold text-white transition hover:bg-petrol-dark"
         >
-          <IconHeart filled={fav} />
+          Reintentar
         </button>
-        <div className="absolute top-2.5 left-2.5">
-          <Badge
-            label={p.condition}
-            variant={p.condition === "Nuevo" ? "new" : "used"}
-          />
-        </div>
-      </div>
-      <div className="p-4">
-        <h3
-          className="text-sm font-semibold mb-1 line-clamp-2"
-          style={{ color: "#102A36", fontFamily: "Manrope, sans-serif" }}
-        >
-          {p.title}
-        </h3>
-        <p className="text-xs mb-2" style={{ color: "#64757D" }}>
-          {p.compatible} · {p.years}
-        </p>
-        <div
-          className="flex items-center gap-1 text-xs mb-3"
-          style={{ color: "#64757D" }}
-        >
-          <IconMapPin /> {p.location}
-        </div>
-        <div className="flex items-end justify-between">
-          <div>
-            <div
-              className="text-lg font-extrabold"
-              style={{ fontFamily: "Manrope, sans-serif", color: "#102A36" }}
-            >
-              {p.price}
-            </div>
-            <div className="text-xs" style={{ color: "#64757D" }}>
-              {p.seller}
-            </div>
-          </div>
-          {p.verified && <Badge label="" variant="verified" />}
-        </div>
-      </div>
-    </motion.div>
+      )}
+    </div>
   )
 }
 
 function FeaturedProducts() {
+  const { listings, isLoading, error, retry } = usePublishedListingSection(
+    PART_LISTING_TYPES,
+    8,
+  )
+
   return (
     <motion.section
       initial="hidden"
@@ -1218,21 +1347,23 @@ function FeaturedProducts() {
             className="text-2xl font-bold"
             style={{ fontFamily: "Manrope, sans-serif", color: "#102A36" }}
           >
-            Repuestos destacados
+            Publicaciones destacadas
           </h2>
-          <a
-            href="#"
-            className="text-sm font-semibold flex items-center gap-1 hover:underline"
-            style={{ color: "#123B4A" }}
-          >
-            Ver todos los repuestos <IconChevronRight />
-          </a>
+          <span className="text-xs font-medium text-muted">Más recientes</span>
         </div>
-        <StaggerGroup className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {PRODUCTS.map((p) => (
-            <ProductCard key={p.id} p={p} />
-          ))}
-        </StaggerGroup>
+        {isLoading ? (
+          <PublicListingsSkeleton count={4} />
+        ) : error ? (
+          <CatalogSectionMessage message={error} onRetry={retry} />
+        ) : listings.length === 0 ? (
+          <CatalogSectionMessage message="Aún no hay publicaciones disponibles." />
+        ) : (
+          <StaggerGroup className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {listings.map((listing) => (
+              <PublicListingCard key={listing.id} listing={listing} />
+            ))}
+          </StaggerGroup>
+        )}
       </div>
     </motion.section>
   )
@@ -1242,12 +1373,16 @@ function FeaturedProducts() {
 
 function SearchByVehicle() {
   const [brand, setBrand] = useState("")
+
   const [model, setModel] = useState("")
+
   const [year, setYear] = useState("")
+
   const [version, setVersion] = useState("")
 
   const fieldClass =
     "w-full px-3 py-3 text-sm rounded-xl border bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-offset-1"
+
   const fieldStyle = { borderColor: "#DCE3E6", color: "#102A36" }
 
   return (
@@ -1288,66 +1423,114 @@ function SearchByVehicle() {
               {[
                 {
                   value: brand,
+
                   set: setBrand,
+
                   label: "Marca del vehículo",
+
                   options: [
                     "Toyota",
+
                     "Hyundai",
+
                     "Kia",
+
                     "Chevrolet",
+
                     "Nissan",
+
                     "Suzuki",
+
                     "Mitsubishi",
+
                     "Ford",
+
                     "Renault",
+
                     "Volkswagen",
                   ],
                 },
+
                 {
                   value: model,
+
                   set: setModel,
+
                   label: "Modelo",
+
                   options: [
                     "Yaris",
+
                     "Accent",
+
                     "Rio",
+
                     "Sail",
+
                     "Sentra",
+
                     "Swift",
+
                     "Outlander",
+
                     "Fiesta",
+
                     "Sandero",
+
                     "Polo",
                   ],
                 },
+
                 {
                   value: year,
+
                   set: setYear,
+
                   label: "Año",
+
                   options: [
                     "2024",
+
                     "2023",
+
                     "2022",
+
                     "2021",
+
                     "2020",
+
                     "2019",
+
                     "2018",
+
                     "2017",
+
                     "2016",
+
                     "2015",
+
                     "2014",
                   ],
                 },
+
                 {
                   value: version,
+
                   set: setVersion,
+
                   label: "Versión (opcional)",
+
                   options: [
                     "1.0 Turbo",
+
                     "1.5 GDI",
+
                     "1.6 MT",
+
                     "1.4 CVT",
+
                     "2.0 AT",
+
                     "1.5 Híbrido",
                   ],
                 },
@@ -1359,6 +1542,7 @@ function SearchByVehicle() {
                     className={fieldClass}
                     style={{
                       ...fieldStyle,
+
                       color: value ? "#102A36" : "#64757D",
                     }}
                   >
@@ -1393,70 +1577,12 @@ function SearchByVehicle() {
 
 // ─── Vehicles ─────────────────────────────────────────────────────────────────
 
-function VehicleCard({ v }: { v: Vehicle }) {
-  return (
-    <motion.div
-      variants={cardEntrance}
-      whileHover={{ y: -4 }}
-      className="animated-card bg-white rounded-2xl border overflow-hidden transition-[box-shadow,border-color] hover:shadow-xl group"
-      style={{ borderColor: "#DCE3E6" }}
-    >
-      <div
-        className="relative aspect-[16/9] overflow-hidden"
-        style={{ background: "#E8F0F3" }}
-      >
-        <img
-          src={v.img}
-          alt={v.brand}
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-        />
-      </div>
-      <div className="p-4">
-        <div className="flex items-start justify-between mb-2">
-          <div>
-            <h3
-              className="font-bold text-sm"
-              style={{ fontFamily: "Manrope, sans-serif", color: "#102A36" }}
-            >
-              {v.brand}
-            </h3>
-            <p className="text-xs" style={{ color: "#64757D" }}>
-              {v.year} · {v.km}
-            </p>
-          </div>
-          <span
-            className="text-xs px-2 py-0.5 rounded-full border"
-            style={{ borderColor: "#DCE3E6", color: "#64757D" }}
-          >
-            {v.seller}
-          </span>
-        </div>
-        <div
-          className="flex items-center gap-1 text-xs mb-3"
-          style={{ color: "#64757D" }}
-        >
-          <IconMapPin /> {v.location}
-        </div>
-        <div className="flex items-center justify-between">
-          <span
-            className="text-lg font-extrabold"
-            style={{ fontFamily: "Manrope, sans-serif", color: "#102A36" }}
-          >
-            {v.price}
-          </span>
-          <button
-            className="text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors hover:bg-opacity-90"
-            style={{ color: "#123B4A", borderColor: "#123B4A" }}
-          >
-            Ver detalle
-          </button>
-        </div>
-      </div>
-    </motion.div>
-  )
-}
-
 function Vehicles() {
+  const { listings, isLoading, error, retry } = usePublishedListingSection(
+    VEHICLE_LISTING_TYPES,
+    6,
+  )
+
   return (
     <motion.section
       initial="hidden"
@@ -1474,19 +1600,25 @@ function Vehicles() {
           >
             Vehículos disponibles
           </h2>
-          <a
-            href="#"
-            className="text-sm font-semibold flex items-center gap-1 hover:underline"
-            style={{ color: "#123B4A" }}
-          >
-            Ver todos los vehículos <IconChevronRight />
-          </a>
+          <span className="text-xs font-medium text-muted">Más recientes</span>
         </div>
-        <StaggerGroup className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-          {VEHICLES.map((v) => (
-            <VehicleCard key={v.id} v={v} />
-          ))}
-        </StaggerGroup>
+        {isLoading ? (
+          <PublicListingsSkeleton count={3} />
+        ) : error ? (
+          <CatalogSectionMessage message={error} onRetry={retry} />
+        ) : listings.length === 0 ? (
+          <CatalogSectionMessage message="Aún no hay vehículos publicados." />
+        ) : (
+          <StaggerGroup className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            {listings.map((listing) => (
+              <PublicListingCard
+                key={listing.id}
+                listing={listing}
+                vehicleLayout
+              />
+            ))}
+          </StaggerGroup>
+        )}
       </div>
     </motion.section>
   )
@@ -1604,20 +1736,31 @@ function Desarmaduras() {
 const STEPS = [
   {
     num: "01",
+
     Icon: IconSearch,
+
     title: "Buscar",
+
     desc: "Busca por producto, marca, modelo o año desde el buscador principal.",
   },
+
   {
     num: "02",
+
     Icon: IconScale,
+
     title: "Comparar",
+
     desc: "Revisa precios, estado, ubicación y perfil del vendedor.",
   },
+
   {
     num: "03",
+
     Icon: IconMessageCircle,
+
     title: "Contactar",
+
     desc: "Comunícate directamente con el vendedor y coordina la compra.",
   },
 ]
@@ -1692,8 +1835,11 @@ function HowItWorks() {
 
 const BENEFITS = [
   "Publicaciones fáciles de administrar",
+
   "Perfil comercial con tu inventario",
+
   "Contacto directo con compradores",
+
   "Mayor visibilidad para tu inventario",
 ]
 
@@ -1763,22 +1909,33 @@ function SellerCTA() {
 const TRUST_ITEMS = [
   {
     icon: <IconShield />,
+
     title: "Vendedores verificados",
+
     desc: "Revisamos la identidad y reputación de los vendedores activos en la plataforma.",
   },
+
   {
     icon: <IconBookOpen />,
+
     title: "Información clara",
+
     desc: "Cada publicación muestra el estado del producto, precio y datos del vendedor de forma transparente.",
   },
+
   {
     icon: <IconMessageCircle />,
+
     title: "Reporta publicaciones",
+
     desc: "Si algo no se ve bien, puedes reportar una publicación fácilmente y la revisaremos.",
   },
+
   {
     icon: <IconCheck />,
+
     title: "Compra de forma segura",
+
     desc: "Seguimos recomendaciones para ayudarte a tomar decisiones informadas y seguras.",
   },
 ]
@@ -1841,31 +1998,46 @@ function Footer() {
   const cols = [
     {
       heading: "Marketplace",
+
       links: ["Repuestos", "Vehículos", "Desarmadurías", "Categorías"],
     },
+
     {
       heading: "Vendedores",
+
       links: [
         "Publicar",
+
         "Crear cuenta",
+
         "Perfil comercial",
+
         "Ayuda para vendedores",
       ],
     },
+
     {
       heading: "Ayuda",
+
       links: [
         "Preguntas frecuentes",
+
         "Contacto",
+
         "Compra segura",
+
         "Reportar publicación",
       ],
     },
+
     {
       heading: "Legal",
+
       links: [
         "Términos y condiciones",
+
         "Política de privacidad",
+
         "Política de publicaciones",
       ],
     },
@@ -1908,6 +2080,7 @@ function Footer() {
                   className="w-8 h-8 rounded-lg flex items-center justify-center transition-opacity hover:opacity-80"
                   style={{
                     background: "rgba(255,255,255,0.1)",
+
                     color: "#A8C4CF",
                   }}
                 >

@@ -1,34 +1,50 @@
 import { useRef, useState, type DragEvent } from "react"
+
 import type {
   PublicationErrors,
   PublicationImagePreview,
 } from "../../types/publication"
+
 import FormSection, { FieldError } from "./FormSection"
 
 type Props = {
   images: PublicationImagePreview[]
+
   error?: PublicationErrors["images"]
+
   addFiles: (files: File[]) => void
+
   removeImage: (id: string) => void
+
   setPrimary: (id: string) => void
 }
 
 export default function ProductImagesSection({
   images,
+
   error,
+
   addFiles,
+
   removeImage,
+
   setPrimary,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
+
   const [dragging, setDragging] = useState(false)
+
   const receive = (files: FileList | null) =>
     files && addFiles(Array.from(files))
+
   const drop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault()
+
     setDragging(false)
+
     receive(event.dataTransfer.files)
   }
+
   return (
     <FormSection
       number={3}
@@ -43,6 +59,7 @@ export default function ProductImagesSection({
         multiple
         onChange={(e) => {
           receive(e.target.files)
+
           e.target.value = ""
         }}
       />
@@ -55,6 +72,7 @@ export default function ProductImagesSection({
         }
         onDragOver={(e) => {
           e.preventDefault()
+
           setDragging(true)
         }}
         onDragLeave={() => setDragging(false)}

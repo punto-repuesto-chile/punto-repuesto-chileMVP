@@ -1,11 +1,16 @@
 import { useEffect, useRef, useState, type FormEvent } from "react"
+
 import { Link, useNavigate } from "react-router-dom"
+
 import PublicationFormFields from "../components/publish/PublicationFormFields"
+
 import PublishHeader from "../components/publish/PublishHeader"
+
 import {
   createPublication,
   ListingPublicationError,
 } from "../services/listingService"
+
 import {
   INITIAL_PUBLICATION_DATA,
   type ProductImage,
@@ -14,6 +19,7 @@ import {
   type PublicationFormData,
   type SetPublicationField,
 } from "../types/publication"
+
 import {
   ACCEPTED_IMAGE_TYPES,
   MAX_PUBLICATION_IMAGES,
@@ -24,29 +30,42 @@ const DRAFT_KEY = "punto-repuesto-publication-draft"
 
 export default function PublishProductPage() {
   const navigate = useNavigate()
+
   const [data, setData] = useState<PublicationFormData>(
     INITIAL_PUBLICATION_DATA,
   )
+
   const [images, setImages] = useState<ProductImage[]>([])
+
   const imagesRef = useRef<ProductImage[]>([])
+
   const submissionLockRef = useRef(false)
+
   const [errors, setErrors] = useState<PublicationErrors>({})
+
   const [isSubmitting, setIsSubmitting] = useState(false)
+
   const [notice, setNotice] = useState<{
     type: "draft" | "success" | "error"
+
     message: string
   } | null>(null)
 
   useEffect(() => {
     const draft = localStorage.getItem(DRAFT_KEY)
+
     if (!draft) return
+
     try {
       setData({
         ...INITIAL_PUBLICATION_DATA,
+
         ...JSON.parse(draft) as Partial<PublicationFormData>,
       })
+
       setNotice({
         type: "draft",
+
         message:
           "Recuperamos automáticamente tu borrador. Las imágenes deben seleccionarse nuevamente por seguridad.",
       })
@@ -64,11 +83,13 @@ export default function PublishProductPage() {
       imagesRef.current.forEach((image) =>
         URL.revokeObjectURL(image.previewUrl),
       ),
+
     [],
   )
 
   const setField: SetPublicationField = (field, value) => {
     setData((current) => ({ ...current, [field]: value }))
+
     setErrors((current) => ({ ...current, [field]: undefined }))
   }
 
@@ -76,21 +97,31 @@ export default function PublishProductPage() {
     const validFiles = files.filter((file) =>
       ACCEPTED_IMAGE_TYPES.includes(file.type),
     )
+
     setImages((current) => {
       const available = Math.max(0, MAX_PUBLICATION_IMAGES - current.length)
+
       const additions = validFiles.slice(0, available).map((file, index) => ({
         kind: "new" as const,
+
         id: `${file.name}-${file.lastModified}-${crypto.randomUUID()}`,
+
         file,
+
         previewUrl: URL.createObjectURL(file),
+
         isPrimary: current.length === 0 && index === 0,
       }))
+
       return [...current, ...additions]
     })
+
     setErrors((current) => ({ ...current, images: undefined }))
+
     if (validFiles.length !== files.length)
       setNotice({
         type: "error",
+
         message:
           "Algunos archivos fueron omitidos. Usa solamente PNG, JPG, JPEG o WebP.",
       })
@@ -99,18 +130,24 @@ export default function PublishProductPage() {
   const removeImage = (id: string) => {
     setImages((current) => {
       const removed = current.find((image) => image.id === id)
+
       if (removed) URL.revokeObjectURL(removed.previewUrl)
+
       const remaining = current.filter((image) => image.id !== id)
+
       if (removed?.isPrimary && remaining[0])
         remaining[0] = { ...remaining[0], isPrimary: true }
+
       return remaining
     })
   }
 
   const saveDraft = () => {
     localStorage.setItem(DRAFT_KEY, JSON.stringify(data))
+
     setNotice({
       type: "draft",
+
       message:
         "Borrador guardado en este navegador. Las imágenes no se guardan.",
     })
@@ -119,37 +156,56 @@ export default function PublishProductPage() {
   const focusFirstError = (fields: PublicationField[]) => {
     requestAnimationFrame(() =>
       document
+
         .getElementById(fields[0])
+
         ?.scrollIntoView({ behavior: "smooth", block: "center" }),
     )
   }
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
+
     if (submissionLockRef.current) return
+
     const nextErrors = validatePublication(data, images)
+
     const invalidFields = Object.keys(nextErrors) as PublicationField[]
+
     if (invalidFields.length) {
       setErrors(nextErrors)
+
       setNotice({
         type: "error",
+
         message: "Revisa los campos destacados antes de publicar.",
       })
+
       focusFirstError(invalidFields)
+
       return
     }
+
     setErrors({})
+
     submissionLockRef.current = true
+
     setIsSubmitting(true)
+
     setNotice(null)
+
     try {
       const result = await createPublication(data, images)
+
       localStorage.removeItem(DRAFT_KEY)
+
       window.scrollTo({ top: 0, left: 0, behavior: "instant" })
+
       navigate(`/publicacion/${result.listingId}`, { replace: true })
     } catch (error) {
       setNotice({
         type: "error",
+
         message:
           error instanceof ListingPublicationError
             ? error.message
@@ -157,6 +213,7 @@ export default function PublishProductPage() {
       })
     } finally {
       submissionLockRef.current = false
+
       setIsSubmitting(false)
     }
   }
@@ -212,6 +269,7 @@ export default function PublishProductPage() {
               setImages((current) =>
                 current.map((image) => ({
                   ...image,
+
                   isPrimary: image.id === id,
                 })),
               )

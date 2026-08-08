@@ -2,15 +2,21 @@ import { Link } from "react-router-dom"
 
 const QUICK_LINKS = [
   { label: "Inicio", to: "/" },
+
   { label: "Publicar producto", to: "/publicar" },
+
   { label: "Mis publicaciones", to: "/mis-publicaciones" },
+
   { label: "Cómo funciona", to: "/#como-funciona" },
 ]
 
 const FAQ_ITEMS = [
   "¿Cómo publico un producto?",
+
   "¿Cómo contacto a un vendedor?",
+
   "¿Qué productos puedo vender?",
+
   "¿Las publicaciones son públicas?",
 ]
 
