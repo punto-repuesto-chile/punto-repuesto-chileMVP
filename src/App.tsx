@@ -700,7 +700,15 @@ function Navbar() {
                 type="button"
                 aria-expanded={partsMenuOpen}
                 aria-haspopup="menu"
-                onClick={() => setPartsMenuOpen((current) => !current)}
+                onClick={() => setPartsMenuOpen(true)}
+                onKeyDown={(event) => {
+                  if (
+                    event.key === "Enter" ||
+                    event.key === " " ||
+                    event.key === "ArrowDown"
+                  )
+                    setPartsMenuOpen(true)
+                }}
                 className="flex items-center gap-1 text-sm font-medium transition-colors hover:opacity-80"
                 style={{ color: "#102A36" }}
               >

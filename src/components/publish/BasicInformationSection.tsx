@@ -1,4 +1,4 @@
-import { PRODUCT_CATEGORIES } from "../../data/publicationOptions"
+import { LISTING_CATEGORIES } from "../../constants/listingCategories"
 import type {
   PublicationErrors,
   PublicationFormData,
@@ -60,8 +60,10 @@ export default function BasicInformationSection({
             className={fieldClass}
           >
             <option value="">Selecciona una categoría</option>
-            {PRODUCT_CATEGORIES.map((item) => (
-              <option key={item}>{item}</option>
+            {LISTING_CATEGORIES.map((category) => (
+              <option key={category.value} value={category.value}>
+                {category.label}
+              </option>
             ))}
           </select>
           <FieldError message={errors.category} />

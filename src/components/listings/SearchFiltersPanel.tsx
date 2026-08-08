@@ -3,6 +3,7 @@ import type {
   PublicListingFilterOptions,
   PublicListingType,
 } from "../../services/publicListingService"
+import { listingCategoryLabel } from "../../constants/listingCategories"
 
 export type SearchFiltersDraft = {
   listingType: "" | PublicListingType
@@ -109,7 +110,7 @@ export default function SearchFiltersPanel({
             <option value="">Todas</option>
             {options.categories.map((category) => (
               <option key={category} value={category}>
-                {category}
+                {listingCategoryLabel(category)}
               </option>
             ))}
           </select>

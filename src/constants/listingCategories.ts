@@ -87,5 +87,15 @@ export const PRODUCT_CATEGORIES = LISTING_CATEGORIES.map(
 )
 
 export function categorySearchUrl(value: string): string {
-  return `/buscar?${new URLSearchParams({ categoria: value }).toString()}`
+  return `/buscar?${new URLSearchParams({
+    tipo: "part",
+    categoria: value,
+  }).toString()}`
+}
+
+export function listingCategoryLabel(value: string): string {
+  return (
+    LISTING_CATEGORIES.find((category) => category.value === value)?.label ??
+    value
+  )
 }

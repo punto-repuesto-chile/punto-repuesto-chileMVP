@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabase"
+import { PARTS_MENU_CATEGORIES } from "../constants/listingCategories"
 import { getListingImagePublicUrl } from "./listingService"
 
 export type PublicListingType = "part" | "accessory" | "vehicle" | "salvage_inventory"
@@ -339,7 +340,13 @@ export async function getPublicListingFilterOptions(): Promise<PublicListingFilt
   }
 
   return {
-    categories: sorted(categories),
+    categories: [
+      ...PARTS_MENU_CATEGORIES.map((category) => category.value),
+      ...sorted(categories).filter(
+        (value) =>
+          !PARTS_MENU_CATEGORIES.some((category) => category.value === value),
+      ),
+    ],
     brands: sorted(brands),
     regions: sorted(regions),
     modelsByBrand: Object.fromEntries(
