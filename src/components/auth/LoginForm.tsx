@@ -15,7 +15,7 @@ type FormErrors = {
 type LocationState = {
   from?: string
 
-  reason?: "publish" | "my-listings" | "edit-listing"
+  reason?: "publish" | "my-listings" | "edit-listing" | "favorite"
 }
 
 export default function LoginForm() {
@@ -43,11 +43,13 @@ export default function LoginForm() {
           type: "info",
 
           text:
-            state.reason === "edit-listing"
-              ? "Inicia sesión para editar esta publicación. Después volverás automáticamente al formulario."
-              : state.reason === "my-listings"
-                ? "Inicia sesión para revisar tus publicaciones. Después volverás automáticamente a esa página."
-                : "Inicia sesión para publicar un producto. Después volverás automáticamente al formulario.",
+            state.reason === "favorite"
+              ? "Inicia sesión para guardar y revisar tus publicaciones favoritas. Después volverás automáticamente."
+              : state.reason === "edit-listing"
+                ? "Inicia sesión para editar esta publicación. Después volverás automáticamente al formulario."
+                : state.reason === "my-listings"
+                  ? "Inicia sesión para revisar tus publicaciones. Después volverás automáticamente a esa página."
+                  : "Inicia sesión para publicar un producto. Después volverás automáticamente al formulario.",
         }
       : null,
   )

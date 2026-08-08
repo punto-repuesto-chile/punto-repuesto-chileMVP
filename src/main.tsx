@@ -9,6 +9,7 @@ import App from "./App"
 import ProtectedRoute from "./components/auth/ProtectedRoute"
 
 import { AuthProvider } from "./context/AuthContext"
+import { FavoritesProvider } from "./context/FavoritesContext"
 
 import EditListingPage from "./pages/EditListingPage"
 
@@ -23,6 +24,7 @@ import PublishProductPage from "./pages/PublishProductPage"
 import RegisterPage from "./pages/RegisterPage"
 
 import SearchListingsPage from "./pages/SearchListingsPage"
+import FavoritesPage from "./pages/FavoritesPage"
 
 import "./index.css"
 
@@ -30,38 +32,48 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
-          <Route path="/" element={<App />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/registro" element={<RegisterPage />} />
-          <Route path="/publicacion/:id" element={<ListingDetailPage />} />
-          <Route path="/buscar" element={<SearchListingsPage />} />
-          <Route
-            path="/publicacion/:id/editar"
-            element={
-              <ProtectedRoute>
-                <EditListingPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/publicar"
-            element={
-              <ProtectedRoute>
-                <PublishProductPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/mis-publicaciones"
-            element={
-              <ProtectedRoute>
-                <MyListingsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="*" element={<App />} />
-        </Routes>
+        <FavoritesProvider>
+          <Routes>
+            <Route path="/" element={<App />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/registro" element={<RegisterPage />} />
+            <Route path="/publicacion/:id" element={<ListingDetailPage />} />
+            <Route path="/buscar" element={<SearchListingsPage />} />
+            <Route
+              path="/favoritos"
+              element={
+                <ProtectedRoute>
+                  <FavoritesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/publicacion/:id/editar"
+              element={
+                <ProtectedRoute>
+                  <EditListingPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/publicar"
+              element={
+                <ProtectedRoute>
+                  <PublishProductPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/mis-publicaciones"
+              element={
+                <ProtectedRoute>
+                  <MyListingsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="*" element={<App />} />
+          </Routes>
+        </FavoritesProvider>
       </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>,

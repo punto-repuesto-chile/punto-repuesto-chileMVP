@@ -29,6 +29,7 @@ import {
   categorySearchUrl,
 } from "./constants/listingCategories"
 import { useAuth } from "./context/AuthContext"
+import { useFavorites } from "./context/FavoritesContext"
 import { DESARMADURAS, type Desarmaduria } from "./data/marketplace"
 import {
   getPublishedListings,
@@ -572,9 +573,9 @@ function Navbar() {
 
   const [isScrolled, setIsScrolled] = useState(false)
 
-  const [favs] = useState(2)
-
   const { user, signOut } = useAuth()
+
+  const { favoriteListingIds, isLoading: favoritesLoading } = useFavorites()
 
   const navigate = useNavigate()
 
@@ -794,20 +795,25 @@ function Navbar() {
             variants={fadeDown}
             className="hidden md:flex items-center gap-3"
           >
-            <button
+            <Link
+              to={user ? "/favoritos" : "/login"}
+              state={user ? undefined : { from: "/", reason: "favorite" }}
+              aria-label={
+                user ? "Ver favoritos" : "Inicia sesión para ver favoritos"
+              }
               className="relative p-2 rounded-lg transition-colors hover:bg-gray-100"
               style={{ color: "#64757D" }}
             >
               <IconHeart />
-              {favs > 0 && (
+              {user && !favoritesLoading && favoriteListingIds.size > 0 && (
                 <span
                   className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full text-white text-xs flex items-center justify-center"
                   style={{ background: "#F97316", fontSize: "10px" }}
                 >
-                  {favs}
+                  {favoriteListingIds.size > 9 ? "9+" : favoriteListingIds.size}
                 </span>
               )}
-            </button>
+            </Link>
             {user ? (
               <div className="relative">
                 <button
@@ -843,6 +849,14 @@ function Navbar() {
                       className="block w-full rounded-lg px-3 py-2 text-left text-sm text-petrol-dark hover:bg-bg"
                     >
                       Mis publicaciones
+                    </Link>
+                    <Link
+                      role="menuitem"
+                      to="/favoritos"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="block w-full rounded-lg px-3 py-2 text-left text-sm text-petrol-dark hover:bg-bg"
+                    >
+                      Favoritos
                     </Link>
                     <Link
                       role="menuitem"
@@ -992,6 +1006,13 @@ function Navbar() {
                     className="col-span-2 rounded-lg bg-white px-2 py-2 text-center text-xs font-semibold text-petrol"
                   >
                     Mis publicaciones
+                  </Link>
+                  <Link
+                    to="/favoritos"
+                    onClick={() => setMobileOpen(false)}
+                    className="rounded-lg bg-white px-2 py-2 text-center text-xs font-semibold text-petrol"
+                  >
+                    Favoritos
                   </Link>
                   <button
                     type="button"

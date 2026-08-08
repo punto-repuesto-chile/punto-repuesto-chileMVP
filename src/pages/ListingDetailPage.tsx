@@ -3,6 +3,7 @@ import { useEffect, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 
 import SiteFooter from "../components/layout/SiteFooter"
+import FavoriteButton from "../components/favorites/FavoriteButton"
 
 import ListingCompatibility from "../components/listings/ListingCompatibility"
 
@@ -162,9 +163,13 @@ export default function ListingDetailPage() {
         ) : (
           <div className="flex flex-col" style={{ gap: "4rem" }}>
             <div
-              className="grid items-start lg:grid-cols-[1.12fr_0.88fr]"
+              className="relative grid items-start lg:grid-cols-[1.12fr_0.88fr]"
               style={{ gap: "3rem" }}
             >
+              <FavoriteButton
+                listingId={listing.id}
+                className="absolute right-3 top-3 z-20 sm:right-4 sm:top-4"
+              />
               <ListingGallery
                 images={listing.images}
                 title={listing.title}

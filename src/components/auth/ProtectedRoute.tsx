@@ -25,15 +25,17 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
   if (!isAuthenticated) {
     const reason = location.pathname.endsWith("/editar")
       ? "edit-listing"
-      : location.pathname === "/mis-publicaciones"
-        ? "my-listings"
-        : "publish"
+      : location.pathname === "/favoritos"
+        ? "favorite"
+        : location.pathname === "/mis-publicaciones"
+          ? "my-listings"
+          : "publish"
 
     return (
       <Navigate
         to="/login"
         replace
-        state={{ from: location.pathname, reason }}
+        state={{ from: `${location.pathname}${location.search}`, reason }}
       />
     )
   }
