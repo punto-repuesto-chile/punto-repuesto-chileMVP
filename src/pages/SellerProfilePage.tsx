@@ -1,26 +1,38 @@
 import { useEffect, useMemo, useState } from "react"
+
 import { Link, useParams } from "react-router-dom"
+
 import SiteFooter from "../components/layout/SiteFooter"
+
 import PublicListingCard from "../components/listings/PublicListingCard"
+
 import {
   getPublicSellerProfile,
   getPublishedListingsBySeller,
   type PublicSellerProfile,
 } from "../services/sellerService"
+
 import type { PublicListingCard as PublicListingCardData } from "../services/publicListingService"
 
 const MEMBER_DATE_FORMATTER = new Intl.DateTimeFormat("es-CL", {
   month: "long",
+
   year: "numeric",
 })
 
 function sellerInitials(name: string): string {
   const initials = name
+
     .trim()
+
     .split(/\s+/)
+
     .slice(0, 2)
+
     .map((part) => part[0]?.toLocaleUpperCase("es-CL") ?? "")
+
     .join("")
+
   return initials || "V"
 }
 
@@ -57,40 +69,62 @@ function SellerProfileSkeleton() {
 
 export default function SellerProfilePage() {
   const { sellerId = "" } = useParams<{ sellerId: string }>()
+
   const [profile, setProfile] = useState<PublicSellerProfile | null>(null)
+
   const [listings, setListings] = useState<PublicListingCardData[]>([])
+
   const [isLoading, setIsLoading] = useState(true)
+
   const [notFound, setNotFound] = useState(false)
+
   const [hasError, setHasError] = useState(false)
+
   const [requestNumber, setRequestNumber] = useState(0)
 
   useEffect(() => {
     let active = true
+
     setIsLoading(true)
+
     setNotFound(false)
+
     setHasError(false)
 
     void Promise.all([
       getPublicSellerProfile(sellerId),
+
       getPublishedListingsBySeller(sellerId),
     ])
+
       .then(([sellerProfile, sellerListings]) => {
         if (!active) return
+
         if (!sellerProfile) {
           setProfile(null)
+
           setListings([])
+
           setNotFound(true)
+
           return
         }
+
         setProfile(sellerProfile)
+
         setListings(sellerListings)
       })
+
       .catch(() => {
         if (!active) return
+
         setProfile(null)
+
         setListings([])
+
         setHasError(true)
       })
+
       .finally(() => {
         if (active) setIsLoading(false)
       })
@@ -101,9 +135,11 @@ export default function SellerProfilePage() {
   }, [requestNumber, sellerId])
 
   const displayName = profile?.fullName.trim() || "Vendedor"
+
   const memberSince = useMemo(
     () =>
       profile ? MEMBER_DATE_FORMATTER.format(new Date(profile.createdAt)) : "",
+
     [profile],
   )
 
@@ -177,9 +213,17 @@ export default function SellerProfilePage() {
           <>
             <section className="rounded-3xl border border-border bg-white p-6 shadow-sm sm:p-8">
               <div className="flex flex-col items-center gap-5 text-center sm:flex-row sm:text-left">
-                <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-petrol font-display text-2xl font-extrabold text-white ring-4 ring-orange/15">
-                  {sellerInitials(displayName)}
-                </div>
+                {profile.avatarUrl ? (
+                  <img
+                    src={profile.avatarUrl}
+                    alt={`Avatar de ${displayName}`}
+                    className="h-20 w-20 shrink-0 rounded-full object-cover ring-4 ring-orange/15"
+                  />
+                ) : (
+                  <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-petrol font-display text-2xl font-extrabold text-white ring-4 ring-orange/15">
+                    {sellerInitials(displayName)}
+                  </div>
+                )}
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wider text-orange">
                     Perfil del vendedor
@@ -190,6 +234,13 @@ export default function SellerProfilePage() {
                   <p className="mt-2 text-sm text-muted">
                     Miembro desde {memberSince}
                   </p>
+                  {(profile.region || profile.commune) && (
+                    <p className="mt-1 text-sm text-muted">
+                      {[profile.commune, profile.region]
+                        .filter(Boolean)
+                        .join(", ")}
+                    </p>
+                  )}
                   <p className="mt-1 text-sm font-semibold text-petrol">
                     {listings.length}{" "}
                     {listings.length === 1
