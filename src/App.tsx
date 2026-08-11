@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+
 import { Link, useNavigate } from "react-router-dom"
 
 import {
@@ -21,16 +22,30 @@ import {
 } from "./animations/variants"
 
 import { StaggerGroup } from "./components/animation/Reveal"
+
 import PublicListingCard from "./components/listings/PublicListingCard"
+
 import PublicListingsSkeleton from "./components/listings/PublicListingsSkeleton"
+
 import {
   LISTING_CATEGORY_VALUES,
   PARTS_MENU_CATEGORIES,
   categorySearchUrl,
 } from "./constants/listingCategories"
+
 import { useAuth } from "./context/AuthContext"
+
 import { useFavorites } from "./context/FavoritesContext"
+
 import { DESARMADURAS, type Desarmaduria } from "./data/marketplace"
+
+import {
+  getMyPublicProfile,
+  getProfileAvatarPublicUrl,
+  PUBLIC_PROFILE_UPDATED_EVENT,
+  type MyPublicProfile,
+} from "./services/profileService"
+
 import {
   getPublishedListings,
   type PublicListingCard as PublicListingCardData,
@@ -39,30 +54,40 @@ import {
 
 function usePublishedListingSection(
   listingTypes: PublicListingType[],
+
   limit: number,
 ) {
   const [listings, setListings] = useState<PublicListingCardData[]>([])
+
   const [isLoading, setIsLoading] = useState(true)
+
   const [error, setError] = useState<string | null>(null)
+
   const [requestNumber, setRequestNumber] = useState(0)
 
   useEffect(() => {
     let active = true
+
     setIsLoading(true)
+
     setError(null)
 
     void getPublishedListings({ listingTypes, limit })
+
       .then((result) => {
         if (active) setListings(result)
       })
+
       .catch((requestError: unknown) => {
         if (!active) return
+
         setError(
           requestError instanceof Error
             ? requestError.message
             : "No pudimos cargar estas publicaciones.",
         )
       })
+
       .finally(() => {
         if (active) setIsLoading(false)
       })
@@ -74,8 +99,11 @@ function usePublishedListingSection(
 
   return {
     listings,
+
     isLoading,
+
     error,
+
     retry: () => setRequestNumber((current) => current + 1),
   }
 }
@@ -575,18 +603,64 @@ function Navbar() {
 
   const { user, signOut } = useAuth()
 
+  const [ownProfile, setOwnProfile] = useState<MyPublicProfile | null>(null)
+
+  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false)
+
   const { favoriteListingIds, isLoading: favoritesLoading } = useFavorites()
 
   const navigate = useNavigate()
 
   const { scrollY } = useScroll()
 
+  useEffect(() => {
+    let active = true
+
+    const handleProfileUpdate = (event: Event) => {
+      const profileEvent = event as CustomEvent<MyPublicProfile>
+      setOwnProfile(profileEvent.detail)
+    }
+
+    window.addEventListener(PUBLIC_PROFILE_UPDATED_EVENT, handleProfileUpdate)
+
+    if (!user) setOwnProfile(null)
+    else
+      void getMyPublicProfile()
+        .then((profile) => {
+          if (active) setOwnProfile(profile)
+        })
+        .catch((error: unknown) => {
+          if (import.meta.env.DEV)
+            console.error(
+              "No se pudo cargar el perfil del Header.",
+              error instanceof Error ? error.message : "Error desconocido",
+            )
+        })
+
+    return () => {
+      active = false
+      window.removeEventListener(
+        PUBLIC_PROFILE_UPDATED_EVENT,
+        handleProfileUpdate,
+      )
+    }
+  }, [user])
+
+  useEffect(() => setAvatarLoadFailed(false), [ownProfile?.avatarPath])
+
   const metadataName = user?.user_metadata.full_name
 
   const displayName =
-    typeof metadataName === "string" && metadataName.trim()
+    ownProfile?.displayName.trim() ||
+    ownProfile?.fullName.trim() ||
+    (typeof metadataName === "string" && metadataName.trim()
       ? metadataName.trim()
-      : (user?.email ?? "Usuario")
+      : (user?.email ?? "Usuario"))
+
+  const publicAvatarUrl =
+    ownProfile?.avatarPath && !avatarLoadFailed
+      ? getProfileAvatarPublicUrl(ownProfile.avatarPath)
+      : null
 
   const initials = displayName
 
@@ -602,7 +676,9 @@ function Navbar() {
 
   const links = [
     { label: "Vehículos", to: "/buscar?tipo=vehicle" },
+
     { label: "Desarmadurías", href: "#" },
+
     { label: "Cómo funciona", href: "#" },
   ]
 
@@ -611,16 +687,22 @@ function Navbar() {
       if (!partsMenuRef.current?.contains(event.target as Node))
         setPartsMenuOpen(false)
     }
+
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return
+
       setPartsMenuOpen(false)
+
       setMobilePartsOpen(false)
     }
 
     document.addEventListener("mousedown", closeOnOutsideClick)
+
     document.addEventListener("keydown", closeOnEscape)
+
     return () => {
       document.removeEventListener("mousedown", closeOnOutsideClick)
+
       document.removeEventListener("keydown", closeOnEscape)
     }
   }, [])
@@ -823,9 +905,18 @@ function Navbar() {
                   aria-haspopup="menu"
                   className="flex items-center gap-2 rounded-xl px-2 py-1.5 text-sm font-semibold text-petrol-dark hover:bg-bg"
                 >
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-petrol text-xs font-bold text-white">
-                    {initials}
-                  </span>
+                  {publicAvatarUrl ? (
+                    <img
+                      src={publicAvatarUrl}
+                      alt=""
+                      onError={() => setAvatarLoadFailed(true)}
+                      className="h-8 w-8 rounded-full object-cover"
+                    />
+                  ) : (
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-petrol text-xs font-bold text-white">
+                      {initials}
+                    </span>
+                  )}
                   <span className="hidden lg:block">{displayName}</span>
                   <IconChevronDown />
                 </button>
@@ -834,14 +925,14 @@ function Navbar() {
                     role="menu"
                     className="absolute right-0 top-12 w-52 rounded-xl border border-border bg-white p-2 shadow-lg"
                   >
-                    <button
-                      type="button"
+                    <Link
                       role="menuitem"
-                      onClick={() => showComingSoon("Mi perfil")}
-                      className="w-full rounded-lg px-3 py-2 text-left text-sm text-petrol-dark hover:bg-bg"
+                      to="/mi-perfil"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="block w-full rounded-lg px-3 py-2 text-left text-sm text-petrol-dark hover:bg-bg"
                     >
                       Mi perfil
-                    </button>
+                    </Link>
                     <Link
                       role="menuitem"
                       to="/mis-publicaciones"
@@ -947,6 +1038,7 @@ function Navbar() {
                       to={categorySearchUrl(category.value)}
                       onClick={() => {
                         setMobilePartsOpen(false)
+
                         setMobileOpen(false)
                       }}
                       className="rounded-lg px-2 py-2 text-sm text-petrol-dark hover:bg-bg"
@@ -995,10 +1087,26 @@ function Navbar() {
             </nav>
             {user && (
               <div className="mx-3 mb-3 rounded-xl bg-bg p-3">
-                <p className="text-sm font-bold text-petrol-dark">
-                  {displayName}
-                </p>
-                <p className="text-xs text-muted">{user.email}</p>
+                <div className="flex items-center gap-3">
+                  {publicAvatarUrl ? (
+                    <img
+                      src={publicAvatarUrl}
+                      alt=""
+                      onError={() => setAvatarLoadFailed(true)}
+                      className="h-10 w-10 rounded-full object-cover"
+                    />
+                  ) : (
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-petrol text-xs font-bold text-white">
+                      {initials}
+                    </span>
+                  )}
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-petrol-dark">
+                      {displayName}
+                    </p>
+                    <p className="truncate text-xs text-muted">{user.email}</p>
+                  </div>
+                </div>
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <Link
                     to="/mis-publicaciones"
@@ -1014,13 +1122,13 @@ function Navbar() {
                   >
                     Favoritos
                   </Link>
-                  <button
-                    type="button"
-                    onClick={() => showComingSoon("Mi perfil")}
-                    className="rounded-lg bg-white px-2 py-2 text-xs font-semibold text-petrol"
+                  <Link
+                    to="/mi-perfil"
+                    onClick={() => setMobileOpen(false)}
+                    className="rounded-lg bg-white px-2 py-2 text-center text-xs font-semibold text-petrol"
                   >
                     Mi perfil
-                  </button>
+                  </Link>
                   <button
                     type="button"
                     onClick={handleLogout}
@@ -1118,12 +1226,15 @@ function Hero() {
 
   const navigateToSearch = () => {
     const normalizedQuery = query.trim().replace(/\s+/g, " ")
+
     if (!normalizedQuery) return
+
     navigate(`/buscar?q=${encodeURIComponent(normalizedQuery)}`)
   }
 
   const submitSearch = (event: React.FormEvent) => {
     event.preventDefault()
+
     navigateToSearch()
   }
 
@@ -1194,7 +1305,9 @@ function Hero() {
                   onChange={(e) => setQuery(e.target.value)}
                   onKeyDown={(event) => {
                     if (event.key !== "Enter") return
+
                     event.preventDefault()
+
                     navigateToSearch()
                   }}
                   placeholder="Busca un producto, pieza o palabra clave…"
@@ -1459,37 +1572,49 @@ function Hero() {
 const CATEGORIES = [
   {
     name: "Motor y transmisión",
+
     to: categorySearchUrl(LISTING_CATEGORY_VALUES.motor),
+
     Icon: CatEngine,
   },
 
   {
     name: "Carrocería",
+
     to: categorySearchUrl(LISTING_CATEGORY_VALUES.body),
+
     Icon: CatBody,
   },
 
   {
     name: "Suspensión y dirección",
+
     to: categorySearchUrl(LISTING_CATEGORY_VALUES.suspension),
+
     Icon: CatSuspension,
   },
 
   {
     name: "Frenos",
+
     to: categorySearchUrl(LISTING_CATEGORY_VALUES.brakes),
+
     Icon: CatBrakes,
   },
 
   {
     name: "Electricidad e iluminación",
+
     to: categorySearchUrl(LISTING_CATEGORY_VALUES.electricity),
+
     Icon: CatElectric,
   },
 
   {
     name: "Neumáticos y llantas",
+
     to: categorySearchUrl(LISTING_CATEGORY_VALUES.tires),
+
     Icon: CatTires,
   },
 
@@ -1555,14 +1680,18 @@ function Categories() {
 }
 
 // First catalog version: "featured" means most recently published.
+
 const PART_LISTING_TYPES: PublicListingType[] = ["part", "accessory"]
+
 const VEHICLE_LISTING_TYPES: PublicListingType[] = ["vehicle"]
 
 function CatalogSectionMessage({
   message,
+
   onRetry,
 }: {
   message: string
+
   onRetry?: () => void
 }) {
   return (
@@ -1584,6 +1713,7 @@ function CatalogSectionMessage({
 function FeaturedProducts() {
   const { listings, isLoading, error, retry } = usePublishedListingSection(
     PART_LISTING_TYPES,
+
     8,
   )
 
@@ -1835,6 +1965,7 @@ function SearchByVehicle() {
 function Vehicles() {
   const { listings, isLoading, error, retry } = usePublishedListingSection(
     VEHICLE_LISTING_TYPES,
+
     6,
   )
 

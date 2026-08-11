@@ -29,7 +29,9 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
         ? "favorite"
         : location.pathname === "/mis-publicaciones"
           ? "my-listings"
-          : "publish"
+          : location.pathname === "/mi-perfil"
+            ? "profile"
+            : "publish"
 
     return (
       <Navigate

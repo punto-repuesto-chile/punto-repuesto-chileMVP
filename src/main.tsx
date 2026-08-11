@@ -25,8 +25,11 @@ import PublishProductPage from "./pages/PublishProductPage"
 import RegisterPage from "./pages/RegisterPage"
 
 import SearchListingsPage from "./pages/SearchListingsPage"
+
 import FavoritesPage from "./pages/FavoritesPage"
+
 import SellerProfilePage from "./pages/SellerProfilePage"
+import MyProfilePage from "./pages/MyProfilePage"
 
 import "./index.css"
 
@@ -42,6 +45,14 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route path="/publicacion/:id" element={<ListingDetailPage />} />
             <Route path="/vendedor/:sellerId" element={<SellerProfilePage />} />
             <Route path="/buscar" element={<SearchListingsPage />} />
+            <Route
+              path="/mi-perfil"
+              element={
+                <ProtectedRoute>
+                  <MyProfilePage />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/favoritos"
               element={
