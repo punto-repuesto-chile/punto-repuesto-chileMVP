@@ -163,6 +163,30 @@ export default function MyListingCard({
                     Volver a publicar
                   </button>
                 )}
+                {listing.status === "sold" && (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation()
+
+                      onRequestAction(listing.id, "published")
+                    }}
+                    className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700 hover:shadow-md"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      className="h-4 w-4"
+                    >
+                      <path d="M20 11a8.1 8.1 0 1 0 2 5.3" />
+                      <path d="M20 4v7h-7" />
+                    </svg>
+                    Volver a poner disponible
+                  </button>
+                )}
                 {(listing.status === "published" ||
                   listing.status === "paused") && (
                   <button

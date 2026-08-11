@@ -406,7 +406,7 @@ const ALLOWED_SOURCE_STATUSES: Record<OwnedListingStatusUpdate, ListingStatus[]>
   {
     paused: ["published"],
 
-    published: ["paused"],
+    published: ["paused", "sold"],
 
     sold: ["published", "paused"],
   }

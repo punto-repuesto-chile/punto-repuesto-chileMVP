@@ -219,7 +219,14 @@ export default function MyListingsPage() {
         pendingAction.action,
       )
 
-      if (succeeded) setPendingAction(null)
+      if (succeeded) {
+        if (pendingAction.action === "published")
+          setActionNotice(
+            "La publicación volvió a estar disponible para los compradores.",
+          )
+
+        setPendingAction(null)
+      }
     } finally {
       actionLockRef.current = false
     }
