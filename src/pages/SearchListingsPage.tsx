@@ -1,13 +1,21 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react"
+
 import { createPortal } from "react-dom"
+
 import { Link, useSearchParams } from "react-router-dom"
+
 import SiteFooter from "../components/layout/SiteFooter"
+
 import PublicListingCard from "../components/listings/PublicListingCard"
+
 import PublicListingsPagination from "../components/listings/PublicListingsPagination"
+
 import PublicListingsSkeleton from "../components/listings/PublicListingsSkeleton"
+
 import SearchFiltersPanel, {
   type SearchFiltersDraft,
 } from "../components/listings/SearchFiltersPanel"
+
 import {
   getPublicListingFilterOptions,
   PUBLIC_LISTINGS_PAGE_SIZE,
@@ -23,51 +31,75 @@ import {
 
 const EMPTY_FILTER_OPTIONS: PublicListingFilterOptions = {
   categories: [],
+
   brands: [],
+
   modelsByBrand: {},
   regions: [],
+  years: [],
 }
 
 const FILTER_PARAM_KEYS = [
   "tipo",
+
   "categoria",
+
   "marca",
+
   "modelo",
+
   "anio",
+
   "region",
+
   "condicion",
+
   "precio_min",
+
   "precio_max",
 ] as const
 
 const CONDITION_LABELS: Record<PublicListingCondition, string> = {
   new: "Nuevo",
+
   used: "Usado",
+
   refurbished: "Reacondicionado",
 }
 
 const LISTING_TYPE_LABELS: Record<PublicListingType, string> = {
   part: "Repuestos",
+
   accessory: "Accesorios",
+
   vehicle: "Vehículos",
+
   salvage_inventory: "Inventario de desarme",
 }
 
 const VALID_LISTING_TYPES = new Set<PublicListingType>([
   "part",
+
   "accessory",
+
   "vehicle",
+
   "salvage_inventory",
 ])
 
 const VALID_CONDITIONS = new Set<PublicListingCondition>([
   "new",
+
   "used",
+
   "refurbished",
 ])
+
 const VALID_SORTS = new Set<PublicListingSort>([
   "recientes",
+
   "precio_asc",
+
   "precio_desc",
 ])
 
@@ -77,7 +109,9 @@ function normalizeQuery(value: string): string {
 
 function optionalInteger(value: string | null): number | undefined {
   if (!value || !/^\d+$/.test(value)) return undefined
+
   const parsed = Number(value)
+
   return Number.isSafeInteger(parsed) ? parsed : undefined
 }
 
@@ -103,7 +137,9 @@ function sortFrom(value: string | null): PublicListingSort {
 
 function pageFrom(value: string | null): number {
   if (!value || !/^\d+$/.test(value)) return 1
+
   const page = Number(value)
+
   return Number.isSafeInteger(page) && page > 0 ? page : 1
 }
 
@@ -114,30 +150,44 @@ function isInvalidPage(value: string | null): boolean {
 function draftFromParams(params: URLSearchParams): SearchFiltersDraft {
   return {
     listingType: listingTypeFrom(params.get("tipo")) ?? "",
+
     category: params.get("categoria") ?? "",
+
     brand: params.get("marca") ?? "",
+
     model: params.get("modelo") ?? "",
+
     year: params.get("anio") ?? "",
+
     region: params.get("region") ?? "",
+
     condition: conditionFrom(params.get("condicion")) ?? "",
+
     minPrice: params.get("precio_min") ?? "",
+
     maxPrice: params.get("precio_max") ?? "",
   }
 }
 
 function validationError(draft: SearchFiltersDraft): string | null {
   const year = optionalInteger(draft.year)
+
   if (draft.year && (year === undefined || year < 1886 || year > 2100))
     return "Ingresa un año entre 1886 y 2100."
 
   const minPrice = optionalInteger(draft.minPrice)
+
   const maxPrice = optionalInteger(draft.maxPrice)
+
   if (draft.minPrice && minPrice === undefined)
     return "El precio mínimo debe ser un entero no negativo."
+
   if (draft.maxPrice && maxPrice === undefined)
     return "El precio máximo debe ser un entero no negativo."
+
   if (minPrice !== undefined && maxPrice !== undefined && minPrice > maxPrice)
     return "El precio mínimo no puede superar el precio máximo."
+
   return null
 }
 
@@ -146,93 +196,140 @@ function optionsFromParams(
 ): SearchPublishedListingsOptions {
   return {
     query: normalizeQuery(params.get("q") ?? "") || undefined,
+
     listingType: listingTypeFrom(params.get("tipo")),
+
     category: params.get("categoria") || undefined,
+
     brand: params.get("marca") || undefined,
+
     model: params.get("modelo") || undefined,
+
     year: optionalInteger(params.get("anio")),
+
     region: params.get("region") || undefined,
+
     condition: conditionFrom(params.get("condicion")),
+
     minPrice: optionalInteger(params.get("precio_min")),
+
     maxPrice: optionalInteger(params.get("precio_max")),
+
     sort: sortFrom(params.get("orden")),
+
     page: pageFrom(params.get("pagina")),
   }
 }
 
 function setOrDelete(params: URLSearchParams, key: string, value: string) {
   const normalized = value.trim()
+
   if (normalized) params.set(key, normalized)
   else params.delete(key)
 }
 
 export default function SearchListingsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
+
   const paramsKey = searchParams.toString()
+
   const query = normalizeQuery(searchParams.get("q") ?? "")
+
   const appliedDraft = useMemo(() => draftFromParams(searchParams), [paramsKey])
+
   const searchOptions = useMemo(
     () => optionsFromParams(searchParams),
+
     [paramsKey],
   )
+
   const appliedValidationError = validationError(appliedDraft)
+
   const sort = sortFrom(searchParams.get("orden"))
+
   const page = pageFrom(searchParams.get("pagina"))
+
   const hasActiveFilters = FILTER_PARAM_KEYS.some((key) =>
     searchParams.has(key),
   )
 
   const [searchDraft, setSearchDraft] = useState(query)
+
   const [filterDraft, setFilterDraft] = useState(appliedDraft)
+
   const [filterError, setFilterError] = useState<string | null>(null)
+
   const [filterOptions, setFilterOptions] =
     useState<PublicListingFilterOptions>(EMPTY_FILTER_OPTIONS)
+
   const [optionsError, setOptionsError] = useState<string | null>(null)
+
   const [optionsRequestNumber, setOptionsRequestNumber] = useState(0)
+
   const [listings, setListings] = useState<PublicListingCardData[]>([])
+
   const [pagination, setPagination] =
     useState<Pick<PaginatedPublicListings, "total" | "pageSize" | "totalPages">>(
       {
         total: 0,
+
         pageSize: PUBLIC_LISTINGS_PAGE_SIZE,
+
         totalPages: 0,
       },
     )
+
   const [isLoading, setIsLoading] = useState(true)
+
   const [error, setError] = useState<string | null>(null)
+
   const [requestNumber, setRequestNumber] = useState(0)
+
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
+
   const resultsHeadingRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const rawPage = searchParams.get("pagina")
+
     if (!isInvalidPage(rawPage)) return
+
     const next = new URLSearchParams(searchParams)
+
     next.set("pagina", "1")
+
     setSearchParams(next, { replace: true })
   }, [paramsKey, searchParams, setSearchParams])
 
   useEffect(() => {
     setSearchDraft(query)
+
     setFilterDraft(appliedDraft)
+
     setFilterError(appliedValidationError)
   }, [paramsKey])
 
   useEffect(() => {
     let active = true
+
     setOptionsError(null)
+
     void getPublicListingFilterOptions()
+
       .then((result) => {
         if (active) setFilterOptions(result)
       })
+
       .catch((requestError: unknown) => {
         if (!active) return
+
         setOptionsError(
           requestError instanceof Error
             ? requestError.message
             : "No pudimos cargar las opciones de filtros.",
         )
       })
+
     return () => {
       active = false
     }
@@ -240,43 +337,62 @@ export default function SearchListingsPage() {
 
   useEffect(() => {
     let active = true
+
     setError(null)
+
     if (appliedValidationError) {
       setListings([])
+
       setPagination((current) => ({ ...current, total: 0, totalPages: 0 }))
+
       setIsLoading(false)
+
       return () => {
         active = false
       }
     }
 
     setIsLoading(true)
+
     void searchPublishedListings(searchOptions)
+
       .then((result) => {
         if (!active) return
+
         const normalizedPage =
           result.totalPages === 0 ? 1 : Math.min(page, result.totalPages)
+
         if (page !== normalizedPage) {
           const next = new URLSearchParams(searchParams)
+
           next.set("pagina", String(normalizedPage))
+
           setSearchParams(next, { replace: true })
+
           return
         }
+
         setListings(result.items)
+
         setPagination({
           total: result.total,
+
           pageSize: result.pageSize,
+
           totalPages: result.totalPages,
         })
       })
+
       .catch((requestError: unknown) => {
         if (!active) return
+
         setError(
           requestError instanceof Error
             ? requestError.message
             : "No pudimos cargar los resultados.",
         )
       })
+
       .finally(() => {
         if (active) setIsLoading(false)
       })
@@ -288,80 +404,118 @@ export default function SearchListingsPage() {
 
   useEffect(() => {
     if (!mobileFiltersOpen) return
+
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") setMobileFiltersOpen(false)
     }
+
     document.addEventListener("keydown", closeOnEscape)
+
     return () => document.removeEventListener("keydown", closeOnEscape)
   }, [mobileFiltersOpen])
 
   const updateSearch = () => {
     const next = new URLSearchParams(searchParams)
+
     setOrDelete(next, "q", normalizeQuery(searchDraft))
+
     next.set("pagina", "1")
+
     setSearchParams(next)
   }
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
+
     updateSearch()
   }
 
   const applyFilters = () => {
     const nextError = validationError(filterDraft)
+
     setFilterError(nextError)
+
     if (nextError) return
 
     const next = new URLSearchParams(searchParams)
+
     setOrDelete(next, "tipo", filterDraft.listingType)
+
     setOrDelete(next, "categoria", filterDraft.category)
+
     setOrDelete(next, "marca", filterDraft.brand)
+
     setOrDelete(next, "modelo", filterDraft.model)
+
     setOrDelete(next, "anio", filterDraft.year)
+
     setOrDelete(next, "region", filterDraft.region)
+
     setOrDelete(next, "condicion", filterDraft.condition)
+
     setOrDelete(next, "precio_min", filterDraft.minPrice)
+
     setOrDelete(next, "precio_max", filterDraft.maxPrice)
+
     next.set("pagina", "1")
+
     setSearchParams(next)
+
     setMobileFiltersOpen(false)
   }
 
   const clearFilters = () => {
     const next = new URLSearchParams(searchParams)
+
     for (const key of FILTER_PARAM_KEYS) next.delete(key)
+
     next.set("pagina", "1")
+
     setSearchParams(next)
+
     setFilterError(null)
+
     setMobileFiltersOpen(false)
   }
 
   const removeFilter = (key: typeof FILTER_PARAM_KEYS[number]) => {
     const next = new URLSearchParams(searchParams)
+
     next.delete(key)
+
     if (key === "marca") next.delete("modelo")
+
     next.set("pagina", "1")
+
     setSearchParams(next)
   }
 
   const updateSort = (nextSort: PublicListingSort) => {
     const next = new URLSearchParams(searchParams)
+
     if (nextSort === "recientes") next.delete("orden")
     else next.set("orden", nextSort)
+
     next.set("pagina", "1")
+
     setSearchParams(next)
   }
 
   const updatePage = (nextPage: number) => {
     if (nextPage === page || nextPage < 1 || nextPage > pagination.totalPages)
       return
+
     const next = new URLSearchParams(searchParams)
+
     next.set("pagina", String(nextPage))
+
     setSearchParams(next)
+
     resultsHeadingRef.current?.scrollIntoView({
       behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
         ? "auto"
         : "smooth",
+
       block: "start",
     })
   }
@@ -369,42 +523,60 @@ export default function SearchListingsPage() {
   const chips = [
     appliedDraft.listingType && {
       key: "tipo" as const,
+
       label: LISTING_TYPE_LABELS[appliedDraft.listingType],
     },
+
     appliedDraft.category && {
       key: "categoria" as const,
+
       label: appliedDraft.category,
     },
+
     appliedDraft.brand && {
       key: "marca" as const,
+
       label: appliedDraft.brand,
     },
+
     appliedDraft.model && {
       key: "modelo" as const,
+
       label: appliedDraft.model,
     },
+
     appliedDraft.year && {
       key: "anio" as const,
+
       label: `Año ${appliedDraft.year}`,
     },
+
     appliedDraft.region && {
       key: "region" as const,
+
       label: appliedDraft.region,
     },
+
     appliedDraft.condition && {
       key: "condicion" as const,
+
       label: CONDITION_LABELS[appliedDraft.condition],
     },
+
     appliedDraft.minPrice && {
       key: "precio_min" as const,
+
       label: `Desde $${Number(appliedDraft.minPrice).toLocaleString("es-CL")}`,
     },
+
     appliedDraft.maxPrice && {
       key: "precio_max" as const,
+
       label: `Hasta $${Number(appliedDraft.maxPrice).toLocaleString("es-CL")}`,
     },
   ].filter(Boolean) as Array<{
     key: typeof FILTER_PARAM_KEYS[number]
+
     label: string
   }>
 
@@ -415,6 +587,7 @@ export default function SearchListingsPage() {
       error={filterError}
       onChange={(next) => {
         setFilterDraft(next)
+
         setFilterError(null)
       }}
       onApply={applyFilters}
@@ -471,7 +644,9 @@ export default function SearchListingsPage() {
             onChange={(event) => setSearchDraft(event.target.value)}
             onKeyDown={(event) => {
               if (event.key !== "Enter") return
+
               event.preventDefault()
+
               updateSearch()
             }}
             placeholder="Busca por producto, marca, modelo o código OEM"
@@ -661,6 +836,7 @@ export default function SearchListingsPage() {
               {panel(() => setMobileFiltersOpen(false))}
             </div>
           </div>,
+
           document.body,
         )}
     </div>

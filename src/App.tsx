@@ -47,8 +47,10 @@ import {
 } from "./services/profileService"
 
 import {
+  getPublicListingFilterOptions,
   getPublishedListings,
   type PublicListingCard as PublicListingCardData,
+  type PublicListingFilterOptions,
   type PublicListingType,
 } from "./services/publicListingService"
 
@@ -618,6 +620,7 @@ function Navbar() {
 
     const handleProfileUpdate = (event: Event) => {
       const profileEvent = event as CustomEvent<MyPublicProfile>
+
       setOwnProfile(profileEvent.detail)
     }
 
@@ -626,21 +629,26 @@ function Navbar() {
     if (!user) setOwnProfile(null)
     else
       void getMyPublicProfile()
+
         .then((profile) => {
           if (active) setOwnProfile(profile)
         })
+
         .catch((error: unknown) => {
           if (import.meta.env.DEV)
             console.error(
               "No se pudo cargar el perfil del Header.",
+
               error instanceof Error ? error.message : "Error desconocido",
             )
         })
 
     return () => {
       active = false
+
       window.removeEventListener(
         PUBLIC_PROFILE_UPDATED_EVENT,
+
         handleProfileUpdate,
       )
     }
@@ -1211,7 +1219,46 @@ function Hero() {
 
   const [region, setRegion] = useState("")
 
+  const [filterOptions, setFilterOptions] =
+    useState<PublicListingFilterOptions>({
+      categories: [],
+
+      brands: [],
+
+      modelsByBrand: {},
+
+      regions: [],
+
+      years: [],
+    })
+
+  const [filterOptionsError, setFilterOptionsError] = useState(false)
+
   const reduceMotion = useReducedMotion()
+
+  useEffect(() => {
+    let active = true
+
+    void getPublicListingFilterOptions()
+      .then((options) => {
+        if (!active) return
+
+        setFilterOptions(options)
+
+        setFilterOptionsError(false)
+      })
+      .catch(() => {
+        if (active) setFilterOptionsError(true)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const availableModels = brand
+    ? (filterOptions.modelsByBrand[brand] ?? [])
+    : []
 
   const selectClass =
     "w-full px-3 py-2.5 text-sm rounded-lg border bg-white appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-opacity-40"
@@ -1227,9 +1274,21 @@ function Hero() {
   const navigateToSearch = () => {
     const normalizedQuery = query.trim().replace(/\s+/g, " ")
 
-    if (!normalizedQuery) return
+    const params = new URLSearchParams()
 
-    navigate(`/buscar?q=${encodeURIComponent(normalizedQuery)}`)
+    if (normalizedQuery) params.set("q", normalizedQuery)
+
+    if (brand) params.set("marca", brand)
+
+    if (model) params.set("modelo", model)
+
+    if (year) params.set("anio", year)
+
+    if (region) params.set("region", region)
+
+    const search = params.toString()
+
+    navigate(search ? `/buscar?${search}` : "/buscar")
   }
 
   const submitSearch = (event: React.FormEvent) => {
@@ -1428,34 +1487,59 @@ function Hero() {
                       "Maule",
                     ],
                   },
-                ].map(({ value, set, label, options }) => (
-                  <div key={label} className="relative">
-                    <select
-                      value={value}
-                      onChange={(e) => set(e.target.value)}
-                      className={selectClass}
-                      style={{
-                        borderColor: "#DCE3E6",
+                ].map(({ value, set, label, options }) => {
+                  const dynamicOptions =
+                    label === "Marca"
+                      ? filterOptions.brands
+                      : label === "Modelo"
+                        ? availableModels
+                        : label.startsWith("A")
+                          ? filterOptions.years.map(String)
+                          : label.startsWith("Regi")
+                            ? filterOptions.regions
+                            : options
+                  const disabled = label === "Modelo" && !brand
 
-                        color: value ? "#102A36" : "#64757D",
-                      }}
-                    >
-                      <option value="">{label}</option>
-                      {options.map((o) => (
-                        <option key={o} value={o}>
-                          {o}
-                        </option>
-                      ))}
-                    </select>
-                    <span
-                      className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2"
-                      style={{ color: "#64757D" }}
-                    >
-                      <IconChevronDown />
-                    </span>
-                  </div>
-                ))}
+                  return (
+                    <div key={label} className="relative">
+                      <select
+                        value={value}
+                        disabled={disabled}
+                        onChange={(e) => {
+                          set(e.target.value)
+                          if (label === "Marca") setModel("")
+                        }}
+                        className={`${selectClass} disabled:cursor-not-allowed disabled:bg-slate-100`}
+                        style={{
+                          borderColor: "#DCE3E6",
+
+                          color: value ? "#102A36" : "#64757D",
+                        }}
+                      >
+                        <option value="">{label}</option>
+                        {dynamicOptions.map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                      </select>
+                      <span
+                        className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2"
+                        style={{ color: "#64757D" }}
+                      >
+                        <IconChevronDown />
+                      </span>
+                    </div>
+                  )
+                })}
               </div>
+
+              {filterOptionsError && (
+                <p className="mb-3 text-xs font-medium text-amber-700">
+                  No pudimos cargar todas las opciones. Aún puedes buscar por
+                  palabra clave.
+                </p>
+              )}
 
               <motion.button
                 type="submit"
