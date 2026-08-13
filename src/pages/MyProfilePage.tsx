@@ -4,6 +4,8 @@ import { Link } from "react-router-dom"
 
 import SiteFooter from "../components/layout/SiteFooter"
 
+import NewPasswordForm from "../components/auth/NewPasswordForm"
+
 import { CHILE_LOCATIONS } from "../data/publicationOptions"
 
 import {
@@ -485,6 +487,21 @@ export default function MyProfilePage() {
               >
                 Mi desarmaduría
               </Link>
+            </section>
+            <section className="mt-6 rounded-3xl border border-border bg-white p-6 shadow-sm sm:p-8">
+              <div className="max-w-xl">
+                <p className="text-xs font-bold uppercase tracking-wider text-orange">
+                  Seguridad
+                </p>
+                <h2 className="mt-2 font-display text-xl font-bold">
+                  Cambiar contraseña
+                </h2>
+                <p className="mb-6 mt-2 text-sm leading-6 text-muted">
+                  Usa una contraseña de al menos 8 caracteres que no reutilices
+                  en otros sitios.
+                </p>
+                <NewPasswordForm submitLabel="Cambiar contraseña" />
+              </div>
             </section>
           </>
         )}
