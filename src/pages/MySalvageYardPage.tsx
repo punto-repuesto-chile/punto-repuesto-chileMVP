@@ -99,6 +99,25 @@ export default function MySalvageYardPage() {
             Desarmaduría creada como borrador.
           </div>
         )}
+        {yard.status === "draft" ? (
+          <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            <p className="font-bold">Tu desarmaduría está en borrador.</p>
+            <p className="mt-1 leading-5">
+              Completa al menos un teléfono o WhatsApp y activa la desarmaduría
+              para hacerla pública y publicar como negocio.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+            <span>Tu desarmaduría está activa y visible públicamente.</span>
+            <Link
+              to={`/desarmaduria/${yard.id}`}
+              className="font-bold underline underline-offset-2"
+            >
+              Ver perfil público
+            </Link>
+          </div>
+        )}
         <div className="mt-8">
           <SalvageYardForm yard={yard} onSaved={setYard} />
         </div>

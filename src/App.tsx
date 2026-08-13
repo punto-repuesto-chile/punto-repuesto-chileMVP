@@ -2212,7 +2212,7 @@ function Desarmaduras() {
               Desarmadurías destacadas
             </h2>
             <p className="text-sm mt-1" style={{ color: "#64757D" }}>
-              Proveedores verificados con amplio inventario
+              Desarmadurías activas con inventario público
             </p>
           </div>
           <Link
