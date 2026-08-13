@@ -7,6 +7,8 @@ import type {
   ExistingProductImage,
 } from "../types/publication"
 
+import { getMySalvageYard } from "./salvageYardService"
+
 const LISTING_IMAGES_BUCKET = "listing-images"
 
 const MAX_IMAGE_COUNT = 8
@@ -53,6 +55,10 @@ export type MyListing = {
   createdAt: string
 
   primaryImageUrl: string | null
+
+  salvageYardId: string | null
+
+  originName: string
 }
 
 export type ListingCondition = "new" | "used" | "refurbished"
@@ -200,6 +206,8 @@ type MyListingRow = {
 
   created_at: string
 
+  salvage_yard_id: string | null
+
   listing_images: MyListingImageRow[] | null
 }
 
@@ -207,6 +215,8 @@ export type CreateListingInput = {
   seller_id: string
 
   listing_type: "part"
+
+  salvage_yard_id: string | null
 
   title: string
 
@@ -274,6 +284,8 @@ export type OwnedListingForEdit = {
 
   status: ListingStatus
 
+  salvageYardId: string | null
+
   formData: PublicationFormData
 
   images: ExistingProductImage[]
@@ -283,6 +295,8 @@ type OwnedListingRow = {
   id: string
 
   status: ListingStatus
+
+  salvage_yard_id: string | null
 
   title: string
 
@@ -363,7 +377,7 @@ export async function getMyListings(): Promise<MyListing[]> {
     .from("listings")
 
     .select(
-      "id,title,price,category,status,stock,region,commune,created_at,listing_images(storage_path,is_primary)",
+      "id,title,price,category,status,stock,region,commune,created_at,salvage_yard_id,listing_images(storage_path,is_primary)",
     )
 
     .eq("seller_id", authData.user.id)
@@ -378,6 +392,10 @@ export async function getMyListings(): Promise<MyListing[]> {
     )
 
   const rows = (data ?? []) as unknown as MyListingRow[]
+
+  const salvageYard = rows.some((row) => row.salvage_yard_id)
+    ? await getMySalvageYard()
+    : null
 
   return rows.map((row) => {
     const primaryImage = row.listing_images?.find((image) => image.is_primary)
@@ -404,6 +422,15 @@ export async function getMyListings(): Promise<MyListing[]> {
       primaryImageUrl: primaryImage
         ? getListingImagePublicUrl(primaryImage.storage_path)
         : null,
+
+      salvageYardId: row.salvage_yard_id,
+
+      originName:
+        row.salvage_yard_id && salvageYard?.id === row.salvage_yard_id
+          ? salvageYard.businessName
+          : row.salvage_yard_id
+            ? "Desarmaduría"
+            : "Particular",
     }
   })
 }
@@ -447,7 +474,7 @@ export async function updateOwnedListingStatus(
     .in("status", ALLOWED_SOURCE_STATUSES[status])
 
     .select(
-      "id,title,price,category,status,stock,region,commune,created_at,listing_images(storage_path,is_primary)",
+      "id,title,price,category,status,stock,region,commune,created_at,salvage_yard_id,listing_images(storage_path,is_primary)",
     )
 
     .eq("listing_images.is_primary", true)
@@ -478,6 +505,8 @@ export async function updateOwnedListingStatus(
 
   const primaryImage = row.listing_images?.find((image) => image.is_primary)
 
+  const salvageYard = row.salvage_yard_id ? await getMySalvageYard() : null
+
   return {
     id: row.id,
 
@@ -500,6 +529,15 @@ export async function updateOwnedListingStatus(
     primaryImageUrl: primaryImage
       ? getListingImagePublicUrl(primaryImage.storage_path)
       : null,
+
+    salvageYardId: row.salvage_yard_id,
+
+    originName:
+      row.salvage_yard_id && salvageYard?.id === row.salvage_yard_id
+        ? salvageYard.businessName
+        : row.salvage_yard_id
+          ? "Desarmaduría"
+          : "Particular",
   }
 }
 
@@ -814,7 +852,7 @@ export async function getOwnedListingById(
     .from("listings")
 
     .select(
-      "id,status,title,description,category,condition,price,stock,vehicle_brand,vehicle_model,year_from,year_to,engine_version,oem_code,region,commune,delivery_methods,contact_name,contact_phone,contact_email,allow_whatsapp,listing_images(id,storage_path,position,is_primary)",
+      "id,status,salvage_yard_id,title,description,category,condition,price,stock,vehicle_brand,vehicle_model,year_from,year_to,engine_version,oem_code,region,commune,delivery_methods,contact_name,contact_phone,contact_email,allow_whatsapp,listing_images(id,storage_path,position,is_primary)",
     )
 
     .eq("id", listingId)
@@ -833,6 +871,8 @@ export async function getOwnedListingById(
     id: row.id,
 
     status: row.status,
+
+    salvageYardId: row.salvage_yard_id,
 
     formData: rowToPublicationFormData(row),
 
@@ -925,6 +965,8 @@ function createListingInput(
   data: PublicationFormData,
 
   sellerId: string,
+
+  salvageYardId: string | null,
 ): CreateListingInput {
   if (!data.condition)
     throw new ListingPublicationError("Selecciona el estado del producto.")
@@ -933,6 +975,8 @@ function createListingInput(
     seller_id: sellerId,
 
     listing_type: "part",
+
+    salvage_yard_id: salvageYardId,
 
     title: data.title.trim(),
 
@@ -1185,10 +1229,30 @@ function getPartiallyUploadedImages(error: unknown): UploadedListingImage[] {
   return []
 }
 
+async function validateCommercialIdentity(
+  salvageYardId: string | null,
+): Promise<void> {
+  if (!salvageYardId) return
+
+  const salvageYard = await getMySalvageYard()
+
+  if (!salvageYard || salvageYard.id !== salvageYardId)
+    throw new ListingPublicationError(
+      "La desarmaduría seleccionada no pertenece a tu cuenta.",
+    )
+
+  if (salvageYard.status !== "active")
+    throw new ListingPublicationError(
+      "Activa tu desarmaduría antes de publicar comercialmente.",
+    )
+}
+
 export async function createPublication(
   data: PublicationFormData,
 
   images: ProductImage[],
+
+  salvageYardId: string | null = null,
 ): Promise<PublicationResult> {
   validateListingData(data)
 
@@ -1203,8 +1267,10 @@ export async function createPublication(
       authError,
     )
 
+  await validateCommercialIdentity(salvageYardId)
+
   const listingId = await createDraftListing(
-    createListingInput(data, authData.user.id),
+    createListingInput(data, authData.user.id, salvageYardId),
   )
 
   let uploadedImages: UploadedListingImage[] = []
@@ -1241,6 +1307,8 @@ function createListingUpdateInput(
   data: PublicationFormData,
 
   sellerId: string,
+
+  salvageYardId: string | null,
 ): ListingUpdateInput {
   const {
     seller_id: _sellerId,
@@ -1252,7 +1320,7 @@ function createListingUpdateInput(
     status: _status,
 
     ...updateInput
-  } = createListingInput(data, sellerId)
+  } = createListingInput(data, sellerId, salvageYardId)
 
   return updateInput
 }
@@ -1356,6 +1424,8 @@ export async function updateOwnedListing(
   images: EditableProductImage[],
 
   original: OwnedListingForEdit,
+
+  salvageYardId: string | null = null,
 ): Promise<void> {
   validateListingData(data)
 
@@ -1377,6 +1447,8 @@ export async function updateOwnedListing(
 
   if (authError || !authData.user)
     throw new ListingPublicationError("Tu sesión no está disponible.")
+
+  await validateCommercialIdentity(salvageYardId)
 
   const { data: ownedRow, error: ownershipError } = await supabase
 
@@ -1432,7 +1504,7 @@ export async function updateOwnedListing(
 
       .from("listings")
 
-      .update(createListingUpdateInput(data, authData.user.id))
+      .update(createListingUpdateInput(data, authData.user.id, salvageYardId))
 
       .eq("id", listingId)
 
@@ -1537,7 +1609,13 @@ export async function updateOwnedListing(
 
       .from("listings")
 
-      .update(createListingUpdateInput(original.formData, authData.user.id))
+      .update(
+        createListingUpdateInput(
+          original.formData,
+          authData.user.id,
+          original.salvageYardId,
+        ),
+      )
 
       .eq("id", listingId)
 

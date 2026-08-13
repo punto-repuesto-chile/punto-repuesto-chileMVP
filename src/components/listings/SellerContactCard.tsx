@@ -8,6 +8,11 @@ function sanitizePhoneForWhatsapp(phone: string): string {
   return digits
 }
 
+type CommercialIdentity = {
+  id: string
+  businessName: string
+}
+
 export default function SellerContactCard({
   name,
 
@@ -16,6 +21,8 @@ export default function SellerContactCard({
   allowWhatsapp,
 
   sellerId,
+
+  salvageYard,
 }: {
   name: string
 
@@ -24,6 +31,8 @@ export default function SellerContactCard({
   allowWhatsapp: boolean
 
   sellerId: string
+
+  salvageYard?: CommercialIdentity | null
 }) {
   const whatsappPhone = sanitizePhoneForWhatsapp(phone)
 
@@ -32,16 +41,25 @@ export default function SellerContactCard({
   return (
     <aside className="rounded-2xl bg-petrol-dark p-5 text-white shadow-sm sm:p-6">
       <p className="text-xs font-bold uppercase tracking-wider text-orange">
-        Vendedor
+        {salvageYard ? "Publicado por" : "Vendedor"}
       </p>
-      <h2 className="mt-2 font-display text-xl font-bold">{name}</h2>
+      <h2 className="mt-2 font-display text-xl font-bold">
+        {salvageYard?.businessName ?? name}
+      </h2>
+      {salvageYard && (
+        <p className="mt-2 text-sm text-white/65">Contacto: {name}</p>
+      )}
       <p className="mt-2 text-sm text-white/65">{phone}</p>
       <div className="mt-5 grid gap-3">
         <Link
-          to={`/vendedor/${sellerId}`}
+          to={
+            salvageYard
+              ? `/desarmaduria/${salvageYard.id}`
+              : `/vendedor/${sellerId}`
+          }
           className="rounded-xl bg-orange px-4 py-3 text-center text-sm font-bold text-white transition hover:bg-orange-dark"
         >
-          Ver perfil del vendedor
+          {salvageYard ? "Ver desarmaduría" : "Ver perfil del vendedor"}
         </Link>
         {allowWhatsapp && whatsappPhone && (
           <a

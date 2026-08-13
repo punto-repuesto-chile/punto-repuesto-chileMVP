@@ -23,10 +23,16 @@ import {
   type PublishedListing,
 } from "../services/listingService"
 
+import { getPublicSalvageYard } from "../services/salvageYardService"
+
+import type { PublicSalvageYard } from "../types/salvageYard"
+
 export default function ListingDetailPage() {
   const { id = "" } = useParams<{ id: string }>()
 
   const [listing, setListing] = useState<PublishedListing | null>(null)
+
+  const [salvageYard, setSalvageYard] = useState<PublicSalvageYard | null>(null)
 
   const [isLoading, setIsLoading] = useState(true)
 
@@ -45,9 +51,11 @@ export default function ListingDetailPage() {
 
     setError(null)
 
+    setSalvageYard(null)
+
     void getPublishedListingById(id)
 
-      .then((result) => {
+      .then(async (result) => {
         if (!active) return
 
         if (!result) {
@@ -56,6 +64,20 @@ export default function ListingDetailPage() {
           setNotFound(true)
 
           return
+        }
+
+        if (result.salvageYardId) {
+          const yard = await getPublicSalvageYard(result.salvageYardId)
+
+          if (!active) return
+
+          if (!yard) {
+            setListing(null)
+            setNotFound(true)
+            return
+          }
+
+          setSalvageYard(yard)
         }
 
         setListing(result)
@@ -187,6 +209,7 @@ export default function ListingDetailPage() {
                   phone={listing.contactPhone}
                   allowWhatsapp={listing.allowWhatsapp}
                   sellerId={listing.sellerId}
+                  salvageYard={salvageYard}
                 />
               </div>
             </div>

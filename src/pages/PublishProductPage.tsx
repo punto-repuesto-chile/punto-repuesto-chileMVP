@@ -4,12 +4,18 @@ import { Link, useNavigate } from "react-router-dom"
 
 import PublicationFormFields from "../components/publish/PublicationFormFields"
 
+import PublicationIdentitySelector from "../components/publish/PublicationIdentitySelector"
+
 import PublishHeader from "../components/publish/PublishHeader"
 
 import {
   createPublication,
   ListingPublicationError,
 } from "../services/listingService"
+
+import { getMySalvageYard } from "../services/salvageYardService"
+
+import type { SalvageYard } from "../types/salvageYard"
 
 import {
   INITIAL_PUBLICATION_DATA,
@@ -45,6 +51,13 @@ export default function PublishProductPage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const [salvageYard, setSalvageYard] = useState<SalvageYard | null>(null)
+
+  const [selectedSalvageYardId, setSelectedSalvageYardId] =
+    useState<string | null>(null)
+
+  const [isIdentityLoading, setIsIdentityLoading] = useState(true)
+
   const [notice, setNotice] = useState<{
     type: "draft" | "success" | "error"
 
@@ -71,6 +84,30 @@ export default function PublishProductPage() {
       })
     } catch {
       localStorage.removeItem(DRAFT_KEY)
+    }
+  }, [])
+
+  useEffect(() => {
+    let active = true
+
+    void getMySalvageYard()
+      .then((yard) => {
+        if (active) setSalvageYard(yard)
+      })
+      .catch(() => {
+        if (active)
+          setNotice({
+            type: "error",
+            message:
+              "No pudimos cargar tu identidad de publicación. Puedes continuar como particular.",
+          })
+      })
+      .finally(() => {
+        if (active) setIsIdentityLoading(false)
+      })
+
+    return () => {
+      active = false
     }
   }, [])
 
@@ -195,7 +232,11 @@ export default function PublishProductPage() {
     setNotice(null)
 
     try {
-      const result = await createPublication(data, images)
+      const result = await createPublication(
+        data,
+        images,
+        selectedSalvageYardId,
+      )
 
       localStorage.removeItem(DRAFT_KEY)
 
@@ -258,6 +299,12 @@ export default function PublishProductPage() {
         )}
 
         <form noValidate onSubmit={submit} className="space-y-6">
+          <PublicationIdentitySelector
+            salvageYard={salvageYard}
+            selectedSalvageYardId={selectedSalvageYardId}
+            isLoading={isIdentityLoading}
+            onChange={setSelectedSalvageYardId}
+          />
           <PublicationFormFields
             data={data}
             images={images}

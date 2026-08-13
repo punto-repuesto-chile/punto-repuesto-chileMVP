@@ -8,6 +8,8 @@ export type PublicListingType = "part" | "accessory" | "vehicle"
 
 export type PublicListingOrigin = "particular" | "salvage-yard"
 
+export type PublicListingOriginFilter = "particular" | "desarmaduria"
+
 export type PublicListingCondition = "new" | "used" | "refurbished"
 
 export type PublicListingCard = {
@@ -102,6 +104,8 @@ export const PUBLIC_LISTINGS_PAGE_SIZE = 12
 
 export type SearchPublishedListingsOptions = {
   query?: string
+
+  origin?: PublicListingOriginFilter
 
   listingType?: PublicListingType
 
@@ -375,6 +379,11 @@ export async function searchPublishedListings(
 
   if (options.listingType) query = query.eq("listing_type", options.listingType)
 
+  if (options.origin === "desarmaduria")
+    query = query.not("salvage_yard_id", "is", null)
+  else if (options.origin === "particular")
+    query = query.is("salvage_yard_id", null)
+
   if (options.category) query = query.eq("category", options.category)
 
   if (options.brand) query = query.eq("vehicle_brand", options.brand)
@@ -416,6 +425,11 @@ export async function searchPublishedListings(
 
       if (options.listingType)
         countQuery = countQuery.eq("listing_type", options.listingType)
+
+      if (options.origin === "desarmaduria")
+        countQuery = countQuery.not("salvage_yard_id", "is", null)
+      else if (options.origin === "particular")
+        countQuery = countQuery.is("salvage_yard_id", null)
 
       if (options.category)
         countQuery = countQuery.eq("category", options.category)

@@ -159,6 +159,8 @@ export async function getPublishedListingsBySeller(
 
     .eq("seller_id", sellerId)
 
+    .is("salvage_yard_id", null)
+
     .eq("status", "published")
 
     .order("created_at", { ascending: false })
