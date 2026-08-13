@@ -2,33 +2,35 @@ import { useState, type FormEvent } from "react"
 import { supabase } from "../../lib/supabase"
 import { validateNewPassword, type PasswordErrors } from "../../utils/password"
 
+type Props = {
+  submitLabel?: string
+  onSuccess?: () => void | Promise<void>
+}
+
 export default function NewPasswordForm({
   submitLabel = "Actualizar contraseña",
   onSuccess,
-}: {
-  submitLabel?: string
-  onSuccess?: () => void | Promise<void>
-}) {
+}: Props) {
   const [password, setPassword] = useState("")
   const [confirmation, setConfirmation] = useState("")
   const [errors, setErrors] = useState<PasswordErrors>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState<{
     type: "success" | "error"
     text: string
   } | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const submit = async (event: FormEvent) => {
+const submit = async (event: FormEvent) => {
     event.preventDefault()
     if (isSubmitting) return
-    const next = validateNewPassword(password, confirmation)
-    if (Object.keys(next).length) {
-      setErrors(next)
+    const nextErrors = validateNewPassword(password, confirmation)
+    if (Object.keys(nextErrors).length) {
+      setErrors(nextErrors)
       setMessage({ type: "error", text: "Revisa los campos indicados." })
       return
     }
-    setIsSubmitting(true)
     setErrors({})
     setMessage(null)
+    setIsSubmitting(true)
     const { error } = await supabase.auth.updateUser({ password })
     setIsSubmitting(false)
     if (error) {
@@ -54,15 +56,21 @@ export default function NewPasswordForm({
           type="password"
           value={password}
           autoComplete="new-password"
-          onChange={(e) => {
-            setPassword(e.target.value)
-            setErrors((c) => ({ ...c, password: undefined }))
+          onChange={(event) => {
+            setPassword(event.target.value)
+            setErrors((current) => ({ ...current, password: undefined }))
           }}
-          className="mt-2 w-full rounded-xl border border-border px-4 py-3 text-sm"
           aria-invalid={Boolean(errors.password)}
+          aria-describedby={errors.password ? "new-password-error" : undefined}
+          className="mt-2 w-full rounded-xl border border-border px-4 py-3 text-sm outline-none focus:border-orange focus:ring-2 focus:ring-orange/20"
         />
         {errors.password && (
-          <p className="mt-2 text-xs text-red-600">{errors.password}</p>
+          <p
+            id="new-password-error"
+            className="mt-2 text-xs font-medium text-red-600"
+          >
+            {errors.password}
+          </p>
         )}
       </div>
       <div>
@@ -74,24 +82,34 @@ export default function NewPasswordForm({
           type="password"
           value={confirmation}
           autoComplete="new-password"
-          onChange={(e) => {
-            setConfirmation(e.target.value)
-            setErrors((c) => ({ ...c, confirmation: undefined }))
+          onChange={(event) => {
+            setConfirmation(event.target.value)
+            setErrors((current) => ({ ...current, confirmation: undefined }))
           }}
-          className="mt-2 w-full rounded-xl border border-border px-4 py-3 text-sm"
           aria-invalid={Boolean(errors.confirmation)}
+          aria-describedby={
+            errors.confirmation ? "confirm-password-error" : undefined
+          }
+          className="mt-2 w-full rounded-xl border border-border px-4 py-3 text-sm outline-none focus:border-orange focus:ring-2 focus:ring-orange/20"
         />
         {errors.confirmation && (
-          <p className="mt-2 text-xs text-red-600">{errors.confirmation}</p>
+          <p
+            id="confirm-password-error"
+            className="mt-2 text-xs font-medium text-red-600"
+          >
+            {errors.confirmation}
+          </p>
         )}
       </div>
       {message && (
         <div
           role="status"
-          className={`rounded-xl border p-4 text-sm ${
+          aria-live="polite"
+          className={`rounded-xl border p-4 text-sm font-medium ${
             message.type === "success"
-              ? "bg-emerald-50 text-emerald-800"
-              : "bg-red-50 text-red-700"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+              : "border-red-200 bg-red-50 text-red-700"
+          }`}
           }`}
         >
           {message.text}
@@ -100,7 +118,8 @@ export default function NewPasswordForm({
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full rounded-xl bg-orange px-5 py-3.5 text-sm font-bold text-white disabled:opacity-60"
+        aria-busy={isSubmitting}
+        className="w-full cursor-pointer rounded-xl bg-orange px-5 py-3.5 text-sm font-bold text-white hover:bg-orange-dark disabled:cursor-not-allowed disabled:opacity-60"
       >
         {isSubmitting ? "Actualizando…" : submitLabel}
       </button>

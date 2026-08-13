@@ -6,7 +6,6 @@ import {
   useState,
   type ReactNode,
 } from "react"
-
 import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js"
 import { supabase } from "../lib/supabase"
 
@@ -105,7 +104,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error }
       },
     }),
-
     [authEvent, isLoading, session, user],
   )
 
