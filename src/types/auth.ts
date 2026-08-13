@@ -1,4 +1,9 @@
-import type { AuthError, Session, User } from "@supabase/supabase-js"
+import type {
+  AuthChangeEvent,
+  AuthError,
+  Session,
+  User,
+} from "@supabase/supabase-js"
 
 export type SignInCredentials = {
   email: string
@@ -19,6 +24,7 @@ export type AuthContextValue = {
   session: Session | null
   isAuthenticated: boolean
   isLoading: boolean
+  authEvent: AuthChangeEvent | null
   signIn: (credentials: SignInCredentials) => Promise<AuthActionResult>
   signUp: (credentials: SignUpCredentials) => Promise<AuthActionResult>
   signOut: () => Promise<{ error: AuthError | null }>

@@ -6,7 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react"
-import type { Session, User } from "@supabase/supabase-js"
+import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js"
 import { supabase } from "../lib/supabase"
 import type {
   AuthContextValue,
@@ -20,6 +20,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [authEvent, setAuthEvent] = useState<AuthChangeEvent | null>(null)
 
   useEffect(() => {
     let isMounted = true
@@ -35,8 +36,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (!isMounted) return
+      setAuthEvent(event)
       setSession(nextSession)
       setUser(nextSession?.user ?? null)
       setIsLoading(false)
@@ -54,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       isAuthenticated: session !== null,
       isLoading,
+      authEvent,
       signIn: async ({ email, password }: SignInCredentials) => {
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
@@ -78,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error }
       },
     }),
-    [isLoading, session, user],
+    [authEvent, isLoading, session, user],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

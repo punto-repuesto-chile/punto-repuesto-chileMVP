@@ -29,7 +29,10 @@ import SearchListingsPage from "./pages/SearchListingsPage"
 import FavoritesPage from "./pages/FavoritesPage"
 
 import SellerProfilePage from "./pages/SellerProfilePage"
+
 import MyProfilePage from "./pages/MyProfilePage"
+import RecoverPasswordPage from "./pages/RecoverPasswordPage"
+import UpdatePasswordPage from "./pages/UpdatePasswordPage"
 
 import "./index.css"
 
@@ -42,6 +45,14 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route path="/" element={<App />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/registro" element={<RegisterPage />} />
+            <Route
+              path="/recuperar-password"
+              element={<RecoverPasswordPage />}
+            />
+            <Route
+              path="/actualizar-password"
+              element={<UpdatePasswordPage />}
+            />
             <Route path="/publicacion/:id" element={<ListingDetailPage />} />
             <Route path="/vendedor/:sellerId" element={<SellerProfilePage />} />
             <Route path="/buscar" element={<SearchListingsPage />} />
