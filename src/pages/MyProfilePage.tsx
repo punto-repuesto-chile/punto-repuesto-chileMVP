@@ -3,7 +3,9 @@ import { useEffect, useMemo, useState, type FormEvent } from "react"
 import { Link } from "react-router-dom"
 
 import SiteFooter from "../components/layout/SiteFooter"
+
 import NewPasswordForm from "../components/auth/NewPasswordForm"
+
 import { CHILE_LOCATIONS } from "../data/publicationOptions"
 
 import {
@@ -468,6 +470,24 @@ export default function MyProfilePage() {
                 </button>
               </div>
             </form>
+            <section className="mt-6 rounded-3xl border border-petrol/15 bg-petrol p-6 text-white shadow-sm sm:p-8">
+              <p className="text-xs font-bold uppercase tracking-wider text-orange">
+                Cuenta comercial
+              </p>
+              <h2 className="mt-2 font-display text-xl font-bold">
+                ¿Administras una desarmaduría?
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/75">
+                Registra y administra la identidad comercial de tu negocio desde
+                un espacio separado de tu perfil personal.
+              </p>
+              <Link
+                to="/mi-desarmaduria"
+                className="mt-5 inline-flex rounded-xl bg-orange px-4 py-2.5 text-sm font-bold text-white hover:bg-orange-dark"
+              >
+                Mi desarmaduría
+              </Link>
+            </section>
             <section className="mt-6 rounded-3xl border border-border bg-white p-6 shadow-sm sm:p-8">
               <div className="max-w-xl">
                 <p className="text-xs font-bold uppercase tracking-wider text-orange">

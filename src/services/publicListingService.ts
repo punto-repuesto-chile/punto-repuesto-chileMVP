@@ -4,7 +4,11 @@ import { PARTS_MENU_CATEGORIES } from "../constants/listingCategories"
 
 import { getListingImagePublicUrl } from "./listingService"
 
-export type PublicListingType = "part" | "accessory" | "vehicle" | "salvage_inventory"
+export type PublicListingType = "part" | "accessory" | "vehicle"
+
+export type PublicListingOrigin = "particular" | "salvage-yard"
+
+export type PublicListingOriginFilter = "particular" | "desarmaduria"
 
 export type PublicListingCondition = "new" | "used" | "refurbished"
 
@@ -12,6 +16,10 @@ export type PublicListingCard = {
   id: string
 
   listingType: PublicListingType
+
+  salvageYardId: string | null
+
+  origin: PublicListingOrigin
 
   title: string
 
@@ -55,6 +63,8 @@ type PublicListingCardRow = {
 
   listing_type: PublicListingType
 
+  salvage_yard_id: string | null
+
   title: string
 
   category: string
@@ -95,6 +105,8 @@ export const PUBLIC_LISTINGS_PAGE_SIZE = 12
 export type SearchPublishedListingsOptions = {
   query?: string
 
+  origin?: PublicListingOriginFilter
+
   listingType?: PublicListingType
 
   category?: string
@@ -132,9 +144,13 @@ export type PaginatedPublicListings = {
 
 export type PublicListingFilterOptions = {
   categories: string[]
+
   brands: string[]
+
   modelsByBrand: Record<string, string[]>
+
   regions: string[]
+
   years: number[]
 }
 
@@ -178,6 +194,10 @@ function mapPublicListingCard(row: PublicListingCardRow): PublicListingCard {
 
     listingType: row.listing_type,
 
+    salvageYardId: row.salvage_yard_id,
+
+    origin: row.salvage_yard_id ? "salvage-yard" : "particular",
+
     title: row.title,
 
     category: row.category,
@@ -220,7 +240,7 @@ export async function getPublishedListings({
     .from("listings")
 
     .select(
-      "id,listing_type,title,category,condition,price,stock,vehicle_brand,vehicle_model,year_from,year_to,region,commune,created_at,listing_images(storage_path,position,is_primary)",
+      "id,listing_type,salvage_yard_id,title,category,condition,price,stock,vehicle_brand,vehicle_model,year_from,year_to,region,commune,created_at,listing_images(storage_path,position,is_primary)",
     )
 
     .eq("status", "published")
@@ -275,7 +295,7 @@ export async function getPublishedListingsByIds(
     .from("listings")
 
     .select(
-      "id,listing_type,title,category,condition,price,stock,vehicle_brand,vehicle_model,year_from,year_to,region,commune,created_at,listing_images(storage_path,position,is_primary)",
+      "id,listing_type,salvage_yard_id,title,category,condition,price,stock,vehicle_brand,vehicle_model,year_from,year_to,region,commune,created_at,listing_images(storage_path,position,is_primary)",
     )
 
     .eq("status", "published")
@@ -328,7 +348,7 @@ export async function searchPublishedListings(
     .from("listings")
 
     .select(
-      "id,listing_type,title,category,condition,price,stock,vehicle_brand,vehicle_model,year_from,year_to,region,commune,created_at,listing_images(storage_path,position,is_primary)",
+      "id,listing_type,salvage_yard_id,title,category,condition,price,stock,vehicle_brand,vehicle_model,year_from,year_to,region,commune,created_at,listing_images(storage_path,position,is_primary)",
 
       { count: "exact" },
     )
@@ -358,6 +378,11 @@ export async function searchPublishedListings(
     query = query.ilike("search_normalized", `%${word}%`)
 
   if (options.listingType) query = query.eq("listing_type", options.listingType)
+
+  if (options.origin === "desarmaduria")
+    query = query.not("salvage_yard_id", "is", null)
+  else if (options.origin === "particular")
+    query = query.is("salvage_yard_id", null)
 
   if (options.category) query = query.eq("category", options.category)
 
@@ -400,6 +425,11 @@ export async function searchPublishedListings(
 
       if (options.listingType)
         countQuery = countQuery.eq("listing_type", options.listingType)
+
+      if (options.origin === "desarmaduria")
+        countQuery = countQuery.not("salvage_yard_id", "is", null)
+      else if (options.origin === "particular")
+        countQuery = countQuery.is("salvage_yard_id", null)
 
       if (options.category)
         countQuery = countQuery.eq("category", options.category)
@@ -484,7 +514,9 @@ type PublicFilterOptionsRow = {
   vehicle_model: string | null
 
   region: string
+
   year_from: number | null
+
   year_to: number | null
 }
 
@@ -500,6 +532,7 @@ export async function getPublicListingFilterOptions(): Promise<PublicListingFilt
     .from("listings")
 
     .select("category,vehicle_brand,vehicle_model,region,year_from,year_to")
+
     .eq("status", "published")
 
   if (error) {
@@ -520,19 +553,25 @@ export async function getPublicListingFilterOptions(): Promise<PublicListingFilt
   const brands = new Set<string>()
 
   const regions = new Set<string>()
+
   const years = new Set<number>()
+
   const modelSetsByBrand: Record<string, Set<string>> = {}
 
   for (const row of (data ?? []) as PublicFilterOptionsRow[]) {
     categories.add(row.category)
+
     regions.add(row.region)
+
     if (row.year_from && row.year_to) {
       for (let year = row.year_from; year <= row.year_to; year += 1)
         years.add(year)
     } else {
       if (row.year_from) years.add(row.year_from)
+
       if (row.year_to) years.add(row.year_to)
     }
+
     if (!row.vehicle_brand) continue
 
     brands.add(row.vehicle_brand)
@@ -557,7 +596,9 @@ export async function getPublicListingFilterOptions(): Promise<PublicListingFilt
     brands: sorted(brands),
 
     regions: sorted(regions),
+
     years: [...years].sort((first, second) => second - first),
+
     modelsByBrand: Object.fromEntries(
       Object.entries(modelSetsByBrand).map(([brand, models]) => [
         brand,

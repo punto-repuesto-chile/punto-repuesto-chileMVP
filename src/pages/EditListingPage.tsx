@@ -4,6 +4,8 @@ import { Link, useNavigate, useParams } from "react-router-dom"
 
 import PublicationFormFields from "../components/publish/PublicationFormFields"
 
+import PublicationIdentitySelector from "../components/publish/PublicationIdentitySelector"
+
 import PublishHeader from "../components/publish/PublishHeader"
 
 import {
@@ -12,6 +14,10 @@ import {
   updateOwnedListing,
   type OwnedListingForEdit,
 } from "../services/listingService"
+
+import { getMySalvageYard } from "../services/salvageYardService"
+
+import type { SalvageYard } from "../types/salvageYard"
 
 import type {
   EditableProductImage,
@@ -50,6 +56,13 @@ export default function EditListingPage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const [salvageYard, setSalvageYard] = useState<SalvageYard | null>(null)
+
+  const [selectedSalvageYardId, setSelectedSalvageYardId] =
+    useState<string | null>(null)
+
+  const [isIdentityLoading, setIsIdentityLoading] = useState(true)
+
   const [hasAccess, setHasAccess] = useState(true)
 
   const [notice, setNotice] = useState<{
@@ -74,6 +87,8 @@ export default function EditListingPage() {
 
         setOriginal(listing)
 
+        setSelectedSalvageYardId(listing.salvageYardId)
+
         setData(listing.formData)
 
         setImages(listing.images)
@@ -91,6 +106,30 @@ export default function EditListingPage() {
       active = false
     }
   }, [id])
+
+  useEffect(() => {
+    let active = true
+
+    void getMySalvageYard()
+      .then((yard) => {
+        if (active) setSalvageYard(yard)
+      })
+      .catch(() => {
+        if (active)
+          setNotice({
+            type: "error",
+            message:
+              "No pudimos cargar tu identidad comercial. Puedes guardar como particular.",
+          })
+      })
+      .finally(() => {
+        if (active) setIsIdentityLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [])
 
   useEffect(() => {
     imagesRef.current = images
@@ -206,7 +245,13 @@ export default function EditListingPage() {
     setNotice(null)
 
     try {
-      await updateOwnedListing(id, data, images, original)
+      await updateOwnedListing(
+        id,
+        data,
+        images,
+        original,
+        selectedSalvageYardId,
+      )
 
       setNotice({
         type: "success",
@@ -300,6 +345,12 @@ export default function EditListingPage() {
         )}
 
         <form noValidate onSubmit={submit} className="space-y-6">
+          <PublicationIdentitySelector
+            salvageYard={salvageYard}
+            selectedSalvageYardId={selectedSalvageYardId}
+            isLoading={isIdentityLoading}
+            onChange={setSelectedSalvageYardId}
+          />
           <PublicationFormFields
             data={data}
             images={images}

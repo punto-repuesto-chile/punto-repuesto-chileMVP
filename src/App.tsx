@@ -24,6 +24,7 @@ import {
 import { StaggerGroup } from "./components/animation/Reveal"
 
 import PublicListingCard from "./components/listings/PublicListingCard"
+import PublicSalvageYardCard from "./components/salvage/PublicSalvageYardCard"
 
 import PublicListingsSkeleton from "./components/listings/PublicListingsSkeleton"
 
@@ -37,7 +38,9 @@ import { useAuth } from "./context/AuthContext"
 
 import { useFavorites } from "./context/FavoritesContext"
 
-import { DESARMADURAS, type Desarmaduria } from "./data/marketplace"
+import { getPublicSalvageYards } from "./services/salvageYardService"
+import type { PublicSalvageYard } from "./types/salvageYard"
+import type { Desarmaduria } from "./data/marketplace"
 
 import {
   getMyPublicProfile,
@@ -685,7 +688,7 @@ function Navbar() {
   const links = [
     { label: "Vehículos", to: "/buscar?tipo=vehicle" },
 
-    { label: "Desarmadurías", href: "#" },
+    { label: "Desarmadurías", href: "/desarmadurias" },
 
     { label: "Cómo funciona", href: "#" },
   ]
@@ -951,6 +954,14 @@ function Navbar() {
                     </Link>
                     <Link
                       role="menuitem"
+                      to="/mi-desarmaduria"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="block w-full rounded-lg px-3 py-2 text-left text-sm text-petrol-dark hover:bg-bg"
+                    >
+                      Mi desarmaduría
+                    </Link>
+                    <Link
+                      role="menuitem"
                       to="/favoritos"
                       onClick={() => setUserMenuOpen(false)}
                       className="block w-full rounded-lg px-3 py-2 text-left text-sm text-petrol-dark hover:bg-bg"
@@ -1137,6 +1148,13 @@ function Navbar() {
                   >
                     Mi perfil
                   </Link>
+                  <Link
+                    to="/mi-desarmaduria"
+                    onClick={() => setMobileOpen(false)}
+                    className="col-span-2 rounded-lg bg-white px-2 py-2 text-center text-xs font-semibold text-petrol"
+                  >
+                    Mi desarmaduría
+                  </Link>
                   <button
                     type="button"
                     onClick={handleLogout}
@@ -1240,6 +1258,7 @@ function Hero() {
     let active = true
 
     void getPublicListingFilterOptions()
+
       .then((options) => {
         if (!active) return
 
@@ -1247,6 +1266,7 @@ function Hero() {
 
         setFilterOptionsError(false)
       })
+
       .catch(() => {
         if (active) setFilterOptionsError(true)
       })
@@ -1498,6 +1518,7 @@ function Hero() {
                           : label.startsWith("Regi")
                             ? filterOptions.regions
                             : options
+
                   const disabled = label === "Modelo" && !brand
 
                   return (
@@ -1507,6 +1528,7 @@ function Hero() {
                         disabled={disabled}
                         onChange={(e) => {
                           set(e.target.value)
+
                           if (label === "Marca") setModel("")
                         }}
                         className={`${selectClass} disabled:cursor-not-allowed disabled:bg-slate-100`}
@@ -2161,6 +2183,16 @@ function DesarmCard({ d }: { d: Desarmaduria }) {
 }
 
 function Desarmaduras() {
+  const [yards, setYards] = useState<PublicSalvageYard[]>([])
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    void getPublicSalvageYards()
+      .then((result) => setYards(result.slice(0, 3)))
+      .catch(() => setYards([]))
+      .finally(() => setLoaded(true))
+  }, [])
+
   return (
     <motion.section
       initial="hidden"
@@ -2180,22 +2212,37 @@ function Desarmaduras() {
               Desarmadurías destacadas
             </h2>
             <p className="text-sm mt-1" style={{ color: "#64757D" }}>
-              Proveedores verificados con amplio inventario
+              Desarmadurías activas con inventario público
             </p>
           </div>
-          <a
-            href="#"
+          <Link
+            to="/desarmadurias"
             className="hidden sm:flex text-sm font-semibold items-center gap-1 hover:underline"
             style={{ color: "#123B4A" }}
           >
             Ver todas <IconChevronRight />
-          </a>
+          </Link>
         </div>
-        <StaggerGroup className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-          {DESARMADURAS.map((d) => (
-            <DesarmCard key={d.name} d={d} />
-          ))}
-        </StaggerGroup>
+        {!loaded ? (
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+            {[1, 2, 3].map((key) => (
+              <div
+                key={key}
+                className="h-52 animate-pulse rounded-2xl bg-white"
+              />
+            ))}
+          </div>
+        ) : yards.length > 0 ? (
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+            {yards.map((yard) => (
+              <PublicSalvageYardCard key={yard.id} yard={yard} />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-border bg-white p-8 text-center text-sm text-muted">
+            Aún no hay desarmadurías activas registradas.
+          </div>
+        )}
       </div>
     </motion.section>
   )

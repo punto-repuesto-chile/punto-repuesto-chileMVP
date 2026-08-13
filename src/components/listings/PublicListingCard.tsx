@@ -1,7 +1,11 @@
 import { motion } from "motion/react"
+
 import { Link } from "react-router-dom"
+
 import { cardEntrance } from "../../animations/variants"
+
 import FavoriteButton from "../favorites/FavoriteButton"
+
 import type {
   PublicListingCard as PublicListingCardData,
   PublicListingCondition,
@@ -9,20 +13,27 @@ import type {
 
 const PRICE_FORMATTER = new Intl.NumberFormat("es-CL", {
   style: "currency",
+
   currency: "CLP",
+
   maximumFractionDigits: 0,
 })
 
 const CONDITION_LABELS: Record<PublicListingCondition, string> = {
   new: "Nuevo",
+
   used: "Usado",
+
   refurbished: "Reacondicionado",
 }
 
 function vehicleDescription(listing: PublicListingCardData): string {
   const vehicle = [listing.vehicleBrand, listing.vehicleModel]
+
     .filter(Boolean)
+
     .join(" ")
+
   const years =
     listing.yearFrom && listing.yearTo
       ? `${listing.yearFrom}–${listing.yearTo}`
@@ -31,14 +42,17 @@ function vehicleDescription(listing: PublicListingCardData): string {
         : listing.yearTo
           ? `Hasta ${listing.yearTo}`
           : ""
+
   return [vehicle, years].filter(Boolean).join(" · ") || listing.category
 }
 
 export default function PublicListingCard({
   listing,
+
   vehicleLayout = false,
 }: {
   listing: PublicListingCardData
+
   vehicleLayout?: boolean
 }) {
   return (
@@ -84,6 +98,11 @@ export default function PublicListingCard({
         <p className="mt-1 line-clamp-1 text-xs text-muted">
           {vehicleDescription(listing)}
         </p>
+        {listing.salvageYardId && (
+          <p className="mt-2 inline-flex rounded-full bg-orange/10 px-2 py-1 text-[11px] font-bold text-orange-dark">
+            Desarmaduría
+          </p>
+        )}
         <p className="mt-3 flex items-center gap-1 text-xs text-muted">
           <span aria-hidden="true">⌖</span>
           {listing.commune}, {listing.region}

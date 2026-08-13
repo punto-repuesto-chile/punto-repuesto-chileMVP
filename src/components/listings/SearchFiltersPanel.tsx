@@ -1,12 +1,14 @@
 import type {
   PublicListingCondition,
   PublicListingFilterOptions,
+  PublicListingOriginFilter,
   PublicListingType,
 } from "../../services/publicListingService"
 import { listingCategoryLabel } from "../../constants/listingCategories"
 
 export type SearchFiltersDraft = {
   listingType: "" | PublicListingType
+  origin: "" | PublicListingOriginFilter
   category: string
   brand: string
   model: string
@@ -24,7 +26,6 @@ const LISTING_TYPE_OPTIONS: Array<{
   { value: "part", label: "Repuestos" },
   { value: "accessory", label: "Accesorios" },
   { value: "vehicle", label: "Vehículos" },
-  { value: "salvage_inventory", label: "Inventario de desarme" },
 ]
 
 const CONDITION_OPTIONS: Array<{
@@ -76,6 +77,24 @@ export default function SearchFiltersPanel({
       </div>
 
       <div className="flex-1 space-y-4 overflow-y-auto px-5 py-5 lg:overflow-visible lg:px-0 lg:py-3">
+        <label className="block text-xs font-bold text-petrol-dark">
+          Vendido por
+          <select
+            value={draft.origin}
+            onChange={(event) =>
+              onChange({
+                ...draft,
+                origin: event.target.value as SearchFiltersDraft["origin"],
+              })
+            }
+            className={selectClass}
+          >
+            <option value="">Todos</option>
+            <option value="particular">Particulares</option>
+            <option value="desarmaduria">Desarmadurías</option>
+          </select>
+        </label>
+
         <label className="block text-xs font-bold text-petrol-dark">
           Tipo de publicación
           <select

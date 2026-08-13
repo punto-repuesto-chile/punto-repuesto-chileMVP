@@ -23,6 +23,7 @@ import {
   type PublicListingCard as PublicListingCardData,
   type PublicListingCondition,
   type PublicListingFilterOptions,
+  type PublicListingOriginFilter,
   type PublicListingSort,
   type PublicListingType,
   type PaginatedPublicListings,
@@ -35,11 +36,15 @@ const EMPTY_FILTER_OPTIONS: PublicListingFilterOptions = {
   brands: [],
 
   modelsByBrand: {},
+
   regions: [],
+
   years: [],
 }
 
 const FILTER_PARAM_KEYS = [
+  "origen",
+
   "tipo",
 
   "categoria",
@@ -73,8 +78,6 @@ const LISTING_TYPE_LABELS: Record<PublicListingType, string> = {
   accessory: "Accesorios",
 
   vehicle: "Vehículos",
-
-  salvage_inventory: "Inventario de desarme",
 }
 
 const VALID_LISTING_TYPES = new Set<PublicListingType>([
@@ -83,8 +86,6 @@ const VALID_LISTING_TYPES = new Set<PublicListingType>([
   "accessory",
 
   "vehicle",
-
-  "salvage_inventory",
 ])
 
 const VALID_CONDITIONS = new Set<PublicListingCondition>([
@@ -149,6 +150,8 @@ function isInvalidPage(value: string | null): boolean {
 
 function draftFromParams(params: URLSearchParams): SearchFiltersDraft {
   return {
+    origin: originFrom(params.get("origen")) ?? "",
+
     listingType: listingTypeFrom(params.get("tipo")) ?? "",
 
     category: params.get("categoria") ?? "",
@@ -167,6 +170,12 @@ function draftFromParams(params: URLSearchParams): SearchFiltersDraft {
 
     maxPrice: params.get("precio_max") ?? "",
   }
+}
+
+function originFrom(
+  value: string | null,
+): PublicListingOriginFilter | undefined {
+  return value === "particular" || value === "desarmaduria" ? value : undefined
 }
 
 function validationError(draft: SearchFiltersDraft): string | null {
@@ -196,6 +205,8 @@ function optionsFromParams(
 ): SearchPublishedListingsOptions {
   return {
     query: normalizeQuery(params.get("q") ?? "") || undefined,
+
+    origin: originFrom(params.get("origen")),
 
     listingType: listingTypeFrom(params.get("tipo")),
 
@@ -441,6 +452,8 @@ export default function SearchListingsPage() {
 
     setOrDelete(next, "tipo", filterDraft.listingType)
 
+    setOrDelete(next, "origen", filterDraft.origin)
+
     setOrDelete(next, "categoria", filterDraft.category)
 
     setOrDelete(next, "marca", filterDraft.brand)
@@ -521,6 +534,14 @@ export default function SearchListingsPage() {
   }
 
   const chips = [
+    appliedDraft.origin && {
+      key: "origen" as const,
+      label:
+        appliedDraft.origin === "desarmaduria"
+          ? "Desarmadurías"
+          : "Particulares",
+    },
+
     appliedDraft.listingType && {
       key: "tipo" as const,
 

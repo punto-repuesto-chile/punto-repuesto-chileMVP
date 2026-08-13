@@ -89,6 +89,11 @@ export default function MyListingCard({
               <h2 className="mt-1 truncate font-display text-xl font-extrabold text-petrol-dark">
                 {listing.title}
               </h2>
+              <p className="mt-1 text-xs font-semibold text-muted">
+                {listing.salvageYardId
+                  ? `Desarmaduría · ${listing.originName}`
+                  : "Particular"}
+              </p>
             </div>
             <p className="font-display text-xl font-extrabold text-petrol">
               {PRICE_FORMATTER.format(listing.price)}

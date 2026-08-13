@@ -31,8 +31,16 @@ import FavoritesPage from "./pages/FavoritesPage"
 import SellerProfilePage from "./pages/SellerProfilePage"
 
 import MyProfilePage from "./pages/MyProfilePage"
+
 import RecoverPasswordPage from "./pages/RecoverPasswordPage"
+
 import UpdatePasswordPage from "./pages/UpdatePasswordPage"
+
+import MySalvageYardPage from "./pages/MySalvageYardPage"
+
+import RegisterSalvageYardPage from "./pages/RegisterSalvageYardPage"
+import SalvageYardsPage from "./pages/SalvageYardsPage"
+import SalvageYardProfilePage from "./pages/SalvageYardProfilePage"
 
 import "./index.css"
 
@@ -53,9 +61,30 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               path="/actualizar-password"
               element={<UpdatePasswordPage />}
             />
+            <Route
+              path="/registrar-desarmaduria"
+              element={
+                <ProtectedRoute>
+                  <RegisterSalvageYardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/mi-desarmaduria"
+              element={
+                <ProtectedRoute>
+                  <MySalvageYardPage />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/publicacion/:id" element={<ListingDetailPage />} />
             <Route path="/vendedor/:sellerId" element={<SellerProfilePage />} />
             <Route path="/buscar" element={<SearchListingsPage />} />
+            <Route path="/desarmadurias" element={<SalvageYardsPage />} />
+            <Route
+              path="/desarmaduria/:id"
+              element={<SalvageYardProfilePage />}
+            />
             <Route
               path="/mi-perfil"
               element={

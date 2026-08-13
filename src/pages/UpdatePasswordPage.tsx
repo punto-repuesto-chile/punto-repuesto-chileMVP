@@ -25,7 +25,7 @@ export default function UpdatePasswordPage() {
         <p className="text-xs font-bold uppercase tracking-wider text-orange">
           Seguridad de cuenta
         </p>
-        {wasUpdated ? (
+{wasUpdated ? (
           <>
             <h1 className="mt-2 font-display text-3xl font-extrabold text-petrol-dark">
               Contraseña actualizada

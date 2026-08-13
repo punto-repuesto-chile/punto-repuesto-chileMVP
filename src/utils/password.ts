@@ -19,5 +19,6 @@ export function validateNewPassword(
   else if (password !== confirmation)
     errors.confirmation = "Las contraseñas no coinciden."
 
+
   return errors
 }

@@ -1,7 +1,9 @@
 import { supabase } from "../lib/supabase"
 
 import { getListingImagePublicUrl } from "./listingService"
+
 import { getProfileAvatarPublicUrl } from "./profileService"
+
 import type {
   PublicListingCard,
   PublicListingCondition,
@@ -13,19 +15,29 @@ const UUID_PATTERN =
 
 export type PublicSellerProfile = {
   id: string
+
   fullName: string
+
   avatarUrl: string | null
+
   region: string | null
+
   commune: string | null
+
   createdAt: string
 }
 
 type PublicSellerProfileRow = {
   id: string
+
   full_name: string
+
   avatar_path: string | null
+
   region: string | null
+
   commune: string | null
+
   created_at: string
 }
 
@@ -41,6 +53,8 @@ type SellerListingRow = {
   id: string
 
   listing_type: PublicListingType
+
+  salvage_yard_id: string | null
 
   title: string
 
@@ -115,12 +129,17 @@ export async function getPublicSellerProfile(
 
   return {
     id: row.id,
+
     fullName: row.full_name,
+
     avatarUrl: row.avatar_path
       ? getProfileAvatarPublicUrl(row.avatar_path)
       : null,
+
     region: row.region,
+
     commune: row.commune,
+
     createdAt: row.created_at,
   }
 }
@@ -135,10 +154,12 @@ export async function getPublishedListingsBySeller(
     .from("listings")
 
     .select(
-      "id,listing_type,title,category,condition,price,stock,vehicle_brand,vehicle_model,year_from,year_to,region,commune,created_at,listing_images(storage_path,position,is_primary)",
+      "id,listing_type,salvage_yard_id,title,category,condition,price,stock,vehicle_brand,vehicle_model,year_from,year_to,region,commune,created_at,listing_images(storage_path,position,is_primary)",
     )
 
     .eq("seller_id", sellerId)
+
+    .is("salvage_yard_id", null)
 
     .eq("status", "published")
 
@@ -172,6 +193,10 @@ export async function getPublishedListingsBySeller(
 
       listingType: row.listing_type,
 
+      salvageYardId: row.salvage_yard_id,
+
+      origin: row.salvage_yard_id ? "salvage-yard" : "particular",
+
       title: row.title,
 
       category: row.category,
@@ -198,6 +223,61 @@ export async function getPublishedListingsBySeller(
 
       primaryImagePath: image?.storage_path ?? null,
 
+      primaryImageUrl: image
+        ? getListingImagePublicUrl(image.storage_path)
+        : null,
+    }
+  })
+}
+
+export async function getPublishedListingsBySalvageYard(
+  salvageYardId: string,
+): Promise<PublicListingCard[]> {
+  if (!UUID_PATTERN.test(salvageYardId)) return []
+
+  const { data, error } = await supabase
+    .from("listings")
+    .select(
+      "id,listing_type,salvage_yard_id,title,category,condition,price,stock,vehicle_brand,vehicle_model,year_from,year_to,region,commune,created_at,listing_images(storage_path,position,is_primary)",
+    )
+    .eq("salvage_yard_id", salvageYardId)
+    .eq("status", "published")
+    .order("created_at", { ascending: false })
+    .order("is_primary", {
+      referencedTable: "listing_images",
+      ascending: false,
+    })
+    .order("position", { referencedTable: "listing_images", ascending: true })
+    .limit(1, { referencedTable: "listing_images" })
+
+  if (error) {
+    reportSellerQueryError(
+      "No se pudieron cargar las publicaciones de la desarmaduría.",
+      error,
+    )
+    throw new SellerQueryError("No pudimos cargar el inventario público.")
+  }
+
+  return ((data ?? []) as unknown as SellerListingRow[]).map((row) => {
+    const image = row.listing_images?.[0] ?? null
+    return {
+      id: row.id,
+      listingType: row.listing_type,
+      salvageYardId: row.salvage_yard_id,
+      origin: "salvage-yard" as const,
+      title: row.title,
+      category: row.category,
+      condition: row.condition,
+      price: Number(row.price),
+      stock: row.stock,
+      vehicleBrand: row.vehicle_brand,
+      vehicleModel: row.vehicle_model,
+      yearFrom: row.year_from,
+      yearTo: row.year_to,
+      region: row.region,
+      commune: row.commune,
+      createdAt: row.created_at,
+      primaryImagePath: image?.storage_path ?? null,
       primaryImageUrl: image
         ? getListingImagePublicUrl(image.storage_path)
         : null,
