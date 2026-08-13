@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from "react"
+
 import { Link } from "react-router-dom"
+
 import { supabase } from "../lib/supabase"
 
 const NEUTRAL_MESSAGE =
@@ -7,27 +9,43 @@ const NEUTRAL_MESSAGE =
 
 export default function RecoverPasswordPage() {
   const [email, setEmail] = useState("")
+
   const [emailError, setEmailError] = useState<string | null>(null)
+
   const [isSubmitting, setIsSubmitting] = useState(false)
+
   const [wasSent, setWasSent] = useState(false)
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
+
     if (isSubmitting || wasSent) return
+
     const trimmedEmail = email.trim()
+
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
       setEmailError("Ingresa un correo electrónico válido.")
+
       return
     }
+
     setEmailError(null)
+
     setIsSubmitting(true)
+
     await supabase.auth.resetPasswordForEmail(trimmedEmail, {
       redirectTo: `${window.location.origin}/actualizar-password`,
     })
+
     setIsSubmitting(false)
+
     setWasSent(true)
   }
-          ← Volver a iniciar sesión
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-bg px-4 py-10">
+      <div className="w-full max-w-md rounded-2xl border border-border bg-white p-6 shadow-sm sm:p-8">
+        <Link to="/login" className="text-sm font-semibold text-petrol">
+          Volver a iniciar sesión
         </Link>
         <p className="mt-8 text-xs font-bold uppercase tracking-wider text-orange">
           Seguridad de cuenta
@@ -61,6 +79,7 @@ export default function RecoverPasswordPage() {
                 autoComplete="email"
                 onChange={(event) => {
                   setEmail(event.target.value)
+
                   setEmailError(null)
                 }}
                 aria-invalid={Boolean(emailError)}
