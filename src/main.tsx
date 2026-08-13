@@ -35,6 +35,8 @@ import MySalvageYardPage from "./pages/MySalvageYardPage"
 import RegisterSalvageYardPage from "./pages/RegisterSalvageYardPage"
 import SalvageYardsPage from "./pages/SalvageYardsPage"
 import SalvageYardProfilePage from "./pages/SalvageYardProfilePage"
+import RecoverPasswordPage from "./pages/RecoverPasswordPage"
+import UpdatePasswordPage from "./pages/UpdatePasswordPage"
 
 import "./index.css"
 
@@ -62,6 +64,12 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
                   <MySalvageYardPage />
                 </ProtectedRoute>
               }
+              path="/recuperar-password"
+              element={<RecoverPasswordPage />}
+            />
+            <Route
+              path="/actualizar-password"
+              element={<UpdatePasswordPage />}
             />
             <Route path="/publicacion/:id" element={<ListingDetailPage />} />
             <Route path="/vendedor/:sellerId" element={<SellerProfilePage />} />

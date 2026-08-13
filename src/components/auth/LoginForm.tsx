@@ -188,25 +188,18 @@ export default function LoginForm() {
         }}
       />
       <div className="flex justify-end text-sm">
-        <button
-          type="button"
-          onClick={() =>
-            setMessage({
-              type: "info",
-
-              text: "La recuperación de contraseña estará disponible próximamente.",
-            })
-          }
+        <Link
+          to="/recuperar-password"
           className="font-semibold text-petrol hover:text-orange"
         >
           ¿Olvidaste tu contraseña?
-        </button>
+        </Link>
       </div>
       <button
         type="submit"
         disabled={isSubmitting}
         aria-busy={isSubmitting}
-        className="w-full rounded-xl bg-orange px-5 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-orange-dark focus:outline-none focus:ring-2 focus:ring-orange/30 disabled:cursor-not-allowed disabled:opacity-60"
+        className="w-full cursor-pointer rounded-xl bg-orange px-5 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-orange-dark focus:outline-none focus:ring-2 focus:ring-orange/30 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {isSubmitting ? "Ingresando..." : "Iniciar sesión"}
       </button>
