@@ -24,6 +24,7 @@ import {
 import { StaggerGroup } from "./components/animation/Reveal"
 
 import PublicListingCard from "./components/listings/PublicListingCard"
+import PublicSalvageYardCard from "./components/salvage/PublicSalvageYardCard"
 
 import PublicListingsSkeleton from "./components/listings/PublicListingsSkeleton"
 
@@ -37,7 +38,9 @@ import { useAuth } from "./context/AuthContext"
 
 import { useFavorites } from "./context/FavoritesContext"
 
-import { DESARMADURAS, type Desarmaduria } from "./data/marketplace"
+import { getPublicSalvageYards } from "./services/salvageYardService"
+import type { PublicSalvageYard } from "./types/salvageYard"
+import type { Desarmaduria } from "./data/marketplace"
 
 import {
   getMyPublicProfile,
@@ -685,7 +688,7 @@ function Navbar() {
   const links = [
     { label: "Vehículos", to: "/buscar?tipo=vehicle" },
 
-    { label: "Desarmadurías", href: "#" },
+    { label: "Desarmadurías", href: "/desarmadurias" },
 
     { label: "Cómo funciona", href: "#" },
   ]
@@ -2180,6 +2183,16 @@ function DesarmCard({ d }: { d: Desarmaduria }) {
 }
 
 function Desarmaduras() {
+  const [yards, setYards] = useState<PublicSalvageYard[]>([])
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    void getPublicSalvageYards()
+      .then((result) => setYards(result.slice(0, 3)))
+      .catch(() => setYards([]))
+      .finally(() => setLoaded(true))
+  }, [])
+
   return (
     <motion.section
       initial="hidden"
@@ -2202,19 +2215,34 @@ function Desarmaduras() {
               Proveedores verificados con amplio inventario
             </p>
           </div>
-          <a
-            href="#"
+          <Link
+            to="/desarmadurias"
             className="hidden sm:flex text-sm font-semibold items-center gap-1 hover:underline"
             style={{ color: "#123B4A" }}
           >
             Ver todas <IconChevronRight />
-          </a>
+          </Link>
         </div>
-        <StaggerGroup className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-          {DESARMADURAS.map((d) => (
-            <DesarmCard key={d.name} d={d} />
-          ))}
-        </StaggerGroup>
+        {!loaded ? (
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+            {[1, 2, 3].map((key) => (
+              <div
+                key={key}
+                className="h-52 animate-pulse rounded-2xl bg-white"
+              />
+            ))}
+          </div>
+        ) : yards.length > 0 ? (
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+            {yards.map((yard) => (
+              <PublicSalvageYardCard key={yard.id} yard={yard} />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-border bg-white p-8 text-center text-sm text-muted">
+            Aún no hay desarmadurías activas registradas.
+          </div>
+        )}
       </div>
     </motion.section>
   )

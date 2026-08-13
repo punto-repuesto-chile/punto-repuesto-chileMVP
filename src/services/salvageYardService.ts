@@ -215,6 +215,39 @@ export async function getPublicSalvageYard(
   return data ? mapPublicSalvageYard(data as PublicSalvageYardRow) : null
 }
 
+export type PublicSalvageYardFilters = {
+  region?: string
+  commune?: string
+}
+
+export async function getPublicSalvageYards(
+  filters: PublicSalvageYardFilters = {},
+): Promise<PublicSalvageYard[]> {
+  let query = supabase
+    .from("salvage_yards")
+    .select(
+      "id,business_name,description,logo_path,region,commune,public_address,phone,whatsapp,opening_hours,created_at",
+    )
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+
+  if (filters.region) query = query.eq("region", filters.region)
+  if (filters.commune) query = query.eq("commune", filters.commune)
+
+  const { data, error } = await query
+  if (error) {
+    reportError("No se pudo cargar el directorio de desarmadurías.", error)
+    throw new SalvageYardServiceError("No pudimos cargar las desarmadurías.")
+  }
+  return ((data ?? []) as PublicSalvageYardRow[]).map(mapPublicSalvageYard)
+}
+
+export function getSalvageYardLogoPublicUrl(
+  path: string | null,
+): string | null {
+  return getLogoPublicUrl(path)
+}
+
 export async function uploadSalvageYardLogo(
   salvageYardId: string,
   file: File,

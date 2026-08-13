@@ -33,6 +33,8 @@ import SellerProfilePage from "./pages/SellerProfilePage"
 import MyProfilePage from "./pages/MyProfilePage"
 import MySalvageYardPage from "./pages/MySalvageYardPage"
 import RegisterSalvageYardPage from "./pages/RegisterSalvageYardPage"
+import SalvageYardsPage from "./pages/SalvageYardsPage"
+import SalvageYardProfilePage from "./pages/SalvageYardProfilePage"
 
 import "./index.css"
 
@@ -64,6 +66,11 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route path="/publicacion/:id" element={<ListingDetailPage />} />
             <Route path="/vendedor/:sellerId" element={<SellerProfilePage />} />
             <Route path="/buscar" element={<SearchListingsPage />} />
+            <Route path="/desarmadurias" element={<SalvageYardsPage />} />
+            <Route
+              path="/desarmaduria/:id"
+              element={<SalvageYardProfilePage />}
+            />
             <Route
               path="/mi-perfil"
               element={
