@@ -72,6 +72,10 @@ export type PublishedListing = {
 
   sellerId: string
 
+  salvageYardId: string | null
+
+  origin: "particular" | "salvage-yard"
+
   title: string
 
   description: string
@@ -133,6 +137,8 @@ type PublishedListingRow = {
   id: string
 
   seller_id: string
+
+  salvage_yard_id: string | null
 
   title: string
 
@@ -659,7 +665,7 @@ export async function getPublishedListingById(
     .from("listings")
 
     .select(
-      "id,seller_id,title,description,category,condition,price,stock,vehicle_brand,vehicle_model,year_from,year_to,engine_version,oem_code,region,commune,delivery_methods,contact_name,contact_phone,allow_whatsapp,created_at,listing_images(id,storage_path,position,is_primary)",
+      "id,seller_id,salvage_yard_id,title,description,category,condition,price,stock,vehicle_brand,vehicle_model,year_from,year_to,engine_version,oem_code,region,commune,delivery_methods,contact_name,contact_phone,allow_whatsapp,created_at,listing_images(id,storage_path,position,is_primary)",
     )
 
     .eq("id", listingId)
@@ -699,6 +705,10 @@ export async function getPublishedListingById(
     id: row.id,
 
     sellerId: row.seller_id,
+
+    salvageYardId: row.salvage_yard_id,
+
+    origin: row.salvage_yard_id ? "salvage-yard" : "particular",
 
     title: row.title,
 

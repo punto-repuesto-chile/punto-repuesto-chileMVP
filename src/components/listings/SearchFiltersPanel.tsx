@@ -24,7 +24,6 @@ const LISTING_TYPE_OPTIONS: Array<{
   { value: "part", label: "Repuestos" },
   { value: "accessory", label: "Accesorios" },
   { value: "vehicle", label: "Vehículos" },
-  { value: "salvage_inventory", label: "Inventario de desarme" },
 ]
 
 const CONDITION_OPTIONS: Array<{

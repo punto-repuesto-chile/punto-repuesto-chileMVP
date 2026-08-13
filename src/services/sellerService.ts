@@ -1,7 +1,9 @@
 import { supabase } from "../lib/supabase"
 
 import { getListingImagePublicUrl } from "./listingService"
+
 import { getProfileAvatarPublicUrl } from "./profileService"
+
 import type {
   PublicListingCard,
   PublicListingCondition,
@@ -13,19 +15,29 @@ const UUID_PATTERN =
 
 export type PublicSellerProfile = {
   id: string
+
   fullName: string
+
   avatarUrl: string | null
+
   region: string | null
+
   commune: string | null
+
   createdAt: string
 }
 
 type PublicSellerProfileRow = {
   id: string
+
   full_name: string
+
   avatar_path: string | null
+
   region: string | null
+
   commune: string | null
+
   created_at: string
 }
 
@@ -41,6 +53,8 @@ type SellerListingRow = {
   id: string
 
   listing_type: PublicListingType
+
+  salvage_yard_id: string | null
 
   title: string
 
@@ -115,12 +129,17 @@ export async function getPublicSellerProfile(
 
   return {
     id: row.id,
+
     fullName: row.full_name,
+
     avatarUrl: row.avatar_path
       ? getProfileAvatarPublicUrl(row.avatar_path)
       : null,
+
     region: row.region,
+
     commune: row.commune,
+
     createdAt: row.created_at,
   }
 }
@@ -135,7 +154,7 @@ export async function getPublishedListingsBySeller(
     .from("listings")
 
     .select(
-      "id,listing_type,title,category,condition,price,stock,vehicle_brand,vehicle_model,year_from,year_to,region,commune,created_at,listing_images(storage_path,position,is_primary)",
+      "id,listing_type,salvage_yard_id,title,category,condition,price,stock,vehicle_brand,vehicle_model,year_from,year_to,region,commune,created_at,listing_images(storage_path,position,is_primary)",
     )
 
     .eq("seller_id", sellerId)
@@ -171,6 +190,10 @@ export async function getPublishedListingsBySeller(
       id: row.id,
 
       listingType: row.listing_type,
+
+      salvageYardId: row.salvage_yard_id,
+
+      origin: row.salvage_yard_id ? "salvage-yard" : "particular",
 
       title: row.title,
 

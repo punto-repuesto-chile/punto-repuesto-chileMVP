@@ -951,6 +951,14 @@ function Navbar() {
                     </Link>
                     <Link
                       role="menuitem"
+                      to="/mi-desarmaduria"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="block w-full rounded-lg px-3 py-2 text-left text-sm text-petrol-dark hover:bg-bg"
+                    >
+                      Mi desarmaduría
+                    </Link>
+                    <Link
+                      role="menuitem"
                       to="/favoritos"
                       onClick={() => setUserMenuOpen(false)}
                       className="block w-full rounded-lg px-3 py-2 text-left text-sm text-petrol-dark hover:bg-bg"
@@ -1137,6 +1145,13 @@ function Navbar() {
                   >
                     Mi perfil
                   </Link>
+                  <Link
+                    to="/mi-desarmaduria"
+                    onClick={() => setMobileOpen(false)}
+                    className="col-span-2 rounded-lg bg-white px-2 py-2 text-center text-xs font-semibold text-petrol"
+                  >
+                    Mi desarmaduría
+                  </Link>
                   <button
                     type="button"
                     onClick={handleLogout}
@@ -1240,6 +1255,7 @@ function Hero() {
     let active = true
 
     void getPublicListingFilterOptions()
+
       .then((options) => {
         if (!active) return
 
@@ -1247,6 +1263,7 @@ function Hero() {
 
         setFilterOptionsError(false)
       })
+
       .catch(() => {
         if (active) setFilterOptionsError(true)
       })
@@ -1498,6 +1515,7 @@ function Hero() {
                           : label.startsWith("Regi")
                             ? filterOptions.regions
                             : options
+
                   const disabled = label === "Modelo" && !brand
 
                   return (
@@ -1507,6 +1525,7 @@ function Hero() {
                         disabled={disabled}
                         onChange={(e) => {
                           set(e.target.value)
+
                           if (label === "Marca") setModel("")
                         }}
                         className={`${selectClass} disabled:cursor-not-allowed disabled:bg-slate-100`}

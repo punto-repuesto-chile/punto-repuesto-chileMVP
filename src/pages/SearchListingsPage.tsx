@@ -35,7 +35,9 @@ const EMPTY_FILTER_OPTIONS: PublicListingFilterOptions = {
   brands: [],
 
   modelsByBrand: {},
+
   regions: [],
+
   years: [],
 }
 
@@ -73,8 +75,6 @@ const LISTING_TYPE_LABELS: Record<PublicListingType, string> = {
   accessory: "Accesorios",
 
   vehicle: "Vehículos",
-
-  salvage_inventory: "Inventario de desarme",
 }
 
 const VALID_LISTING_TYPES = new Set<PublicListingType>([
@@ -83,8 +83,6 @@ const VALID_LISTING_TYPES = new Set<PublicListingType>([
   "accessory",
 
   "vehicle",
-
-  "salvage_inventory",
 ])
 
 const VALID_CONDITIONS = new Set<PublicListingCondition>([
