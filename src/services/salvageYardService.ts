@@ -228,7 +228,6 @@ export async function getPublicSalvageYards(
     .select(
       "id,business_name,description,logo_path,region,commune,public_address,phone,whatsapp,opening_hours,created_at",
     )
-    .eq("status", "active")
     .order("created_at", { ascending: false })
 
   if (filters.region) query = query.eq("region", filters.region)
