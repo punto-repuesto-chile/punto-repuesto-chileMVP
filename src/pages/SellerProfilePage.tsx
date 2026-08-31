@@ -13,6 +13,12 @@ import {
 } from "../services/sellerService"
 
 import type { PublicListingCard as PublicListingCardData } from "../services/publicListingService"
+import {
+  getSellerReputation,
+  getSellerReviews,
+} from "../services/reviewService"
+import type { PublicReview, ReputationSummary } from "../types/review"
+import ReputationSection from "../components/reviews/ReputationSection"
 
 const MEMBER_DATE_FORMATTER = new Intl.DateTimeFormat("es-CL", {
   month: "long",
@@ -81,6 +87,11 @@ export default function SellerProfilePage() {
   const [hasError, setHasError] = useState(false)
 
   const [requestNumber, setRequestNumber] = useState(0)
+  const [reputation, setReputation] = useState<ReputationSummary | null>(null)
+  const [reviews, setReviews] = useState<PublicReview[]>([])
+  const [reviewsLoading, setReviewsLoading] = useState(false)
+  const [reviewsOffset, setReviewsOffset] = useState(0)
+  const [reviewsHasMore, setReviewsHasMore] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -91,29 +102,38 @@ export default function SellerProfilePage() {
 
     setHasError(false)
 
+    setReviewsLoading(true)
     void Promise.all([
       getPublicSellerProfile(sellerId),
 
       getPublishedListingsBySeller(sellerId),
+      getSellerReputation(sellerId),
+      getSellerReviews(sellerId, { limit: 10, offset: 0 }),
     ])
 
-      .then(([sellerProfile, sellerListings]) => {
-        if (!active) return
+      .then(
+        ([sellerProfile, sellerListings, sellerReputation, sellerReviews]) => {
+          if (!active) return
 
-        if (!sellerProfile) {
-          setProfile(null)
+          if (!sellerProfile) {
+            setProfile(null)
 
-          setListings([])
+            setListings([])
 
-          setNotFound(true)
+            setNotFound(true)
 
-          return
-        }
+            return
+          }
 
-        setProfile(sellerProfile)
+          setProfile(sellerProfile)
 
-        setListings(sellerListings)
-      })
+          setListings(sellerListings)
+          setReputation(sellerReputation)
+          setReviews(sellerReviews)
+          setReviewsOffset(sellerReviews.length)
+          setReviewsHasMore(sellerReviews.length === 10)
+        },
+      )
 
       .catch(() => {
         if (!active) return
@@ -126,13 +146,31 @@ export default function SellerProfilePage() {
       })
 
       .finally(() => {
-        if (active) setIsLoading(false)
+        if (active) {
+          setIsLoading(false)
+          setReviewsLoading(false)
+        }
       })
 
     return () => {
       active = false
     }
   }, [requestNumber, sellerId])
+
+  const loadMoreReviews = async () => {
+    setReviewsLoading(true)
+    try {
+      const nextReviews = await getSellerReviews(sellerId, {
+        limit: 10,
+        offset: reviewsOffset,
+      })
+      setReviews((current) => [...current, ...nextReviews])
+      setReviewsOffset((current) => current + nextReviews.length)
+      setReviewsHasMore(nextReviews.length === 10)
+    } finally {
+      setReviewsLoading(false)
+    }
+  }
 
   const displayName = profile?.fullName.trim() || "Vendedor"
 
@@ -237,7 +275,9 @@ export default function SellerProfilePage() {
                   {(profile.region || profile.commune) && (
                     <p className="mt-1 text-sm text-muted">
                       {[profile.commune, profile.region]
+
                         .filter(Boolean)
+
                         .join(", ")}
                     </p>
                   )}
@@ -250,6 +290,14 @@ export default function SellerProfilePage() {
                 </div>
               </div>
             </section>
+
+            <ReputationSection
+              summary={reputation}
+              reviews={reviews}
+              isLoading={reviewsLoading}
+              hasMore={reviewsHasMore}
+              onLoadMore={() => void loadMoreReviews()}
+            />
 
             <section className="mt-12">
               <h2 className="font-display text-2xl font-extrabold">

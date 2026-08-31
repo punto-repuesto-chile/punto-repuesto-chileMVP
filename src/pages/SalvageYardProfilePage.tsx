@@ -5,6 +5,12 @@ import { getPublicSalvageYard } from "../services/salvageYardService"
 import { getPublishedListingsBySalvageYard } from "../services/sellerService"
 import type { PublicListingCard as Listing } from "../services/publicListingService"
 import type { PublicSalvageYard } from "../types/salvageYard"
+import {
+  getSalvageYardReputation,
+  getSalvageYardReviews,
+} from "../services/reviewService"
+import type { PublicReview, ReputationSummary } from "../types/review"
+import ReputationSection from "../components/reviews/ReputationSection"
 
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -21,31 +27,61 @@ export default function SalvageYardProfilePage() {
   const [listings, setListings] = useState<Listing[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const [reputation, setReputation] = useState<ReputationSummary | null>(null)
+  const [reviews, setReviews] = useState<PublicReview[]>([])
+  const [reviewsLoading, setReviewsLoading] = useState(false)
+  const [reviewsOffset, setReviewsOffset] = useState(0)
+  const [reviewsHasMore, setReviewsHasMore] = useState(false)
   useEffect(() => {
     let active = true
     if (!UUID.test(id)) {
       setLoading(false)
       return
     }
+    setReviewsLoading(true)
     Promise.all([
       getPublicSalvageYard(id),
       getPublishedListingsBySalvageYard(id),
+      getSalvageYardReputation(id),
+      getSalvageYardReviews(id, { limit: 10, offset: 0 }),
     ])
-      .then(([nextYard, nextListings]) => {
+      .then(([nextYard, nextListings, nextReputation, nextReviews]) => {
         if (!active) return
         setYard(nextYard)
         setListings(nextListings)
+        setReputation(nextReputation)
+        setReviews(nextReviews)
+        setReviewsOffset(nextReviews.length)
+        setReviewsHasMore(nextReviews.length === 10)
       })
       .catch(() => {
         if (active) setError(true)
       })
       .finally(() => {
-        if (active) setLoading(false)
+        if (active) {
+          setLoading(false)
+          setReviewsLoading(false)
+        }
       })
     return () => {
       active = false
     }
   }, [id])
+
+  const loadMoreReviews = async () => {
+    setReviewsLoading(true)
+    try {
+      const nextReviews = await getSalvageYardReviews(id, {
+        limit: 10,
+        offset: reviewsOffset,
+      })
+      setReviews((current) => [...current, ...nextReviews])
+      setReviewsOffset((current) => current + nextReviews.length)
+      setReviewsHasMore(nextReviews.length === 10)
+    } finally {
+      setReviewsLoading(false)
+    }
+  }
   if (loading)
     return (
       <main className="min-h-screen bg-bg px-4 py-10">
@@ -154,6 +190,13 @@ export default function SalvageYardProfilePage() {
             {new Date(yard.createdAt).toLocaleDateString("es-CL")}
           </p>
         </section>
+        <ReputationSection
+          summary={reputation}
+          reviews={reviews}
+          isLoading={reviewsLoading}
+          hasMore={reviewsHasMore}
+          onLoadMore={() => void loadMoreReviews()}
+        />
         <section className="mt-10">
           <div className="flex items-end justify-between gap-3">
             <div>

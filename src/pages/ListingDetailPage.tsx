@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 
-import { Link, useParams } from "react-router-dom"
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
 
 import SiteFooter from "../components/layout/SiteFooter"
 
@@ -26,9 +26,14 @@ import {
 import { getPublicSalvageYard } from "../services/salvageYardService"
 
 import type { PublicSalvageYard } from "../types/salvageYard"
+import { useAuth } from "../context/AuthContext"
+import { requestReviewInteraction } from "../services/reviewService"
 
 export default function ListingDetailPage() {
   const { id = "" } = useParams<{ id: string }>()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const { user } = useAuth()
 
   const [listing, setListing] = useState<PublishedListing | null>(null)
 
@@ -41,6 +46,11 @@ export default function ListingDetailPage() {
   const [error, setError] = useState<string | null>(null)
 
   const [requestNumber, setRequestNumber] = useState(0)
+  const [interactionMessage, setInteractionMessage] = useState<string | null>(
+    null,
+  )
+  const [interactionError, setInteractionError] = useState<string | null>(null)
+  const [isRequestingInteraction, setIsRequestingInteraction] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -105,6 +115,34 @@ export default function ListingDetailPage() {
       active = false
     }
   }, [id, requestNumber])
+
+  const requestInteraction = async () => {
+    if (!user) {
+      navigate("/login", {
+        state: { from: location.pathname, reason: "review" },
+      })
+      return
+    }
+    if (!listing || user.id === listing.sellerId || isRequestingInteraction)
+      return
+    setIsRequestingInteraction(true)
+    setInteractionError(null)
+    setInteractionMessage(null)
+    try {
+      await requestReviewInteraction(listing.id)
+      setInteractionMessage(
+        "Solicitud enviada. Si el vendedor confirma el trato, podrás dejar una reseña.",
+      )
+    } catch (requestError) {
+      setInteractionError(
+        requestError instanceof Error
+          ? requestError.message
+          : "No pudimos enviar la solicitud de trato.",
+      )
+    } finally {
+      setIsRequestingInteraction(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-bg text-petrol-dark">
@@ -211,6 +249,48 @@ export default function ListingDetailPage() {
                   sellerId={listing.sellerId}
                   salvageYard={salvageYard}
                 />
+                {user?.id !== listing.sellerId && (
+                  <section className="rounded-2xl border border-orange/20 bg-orange/5 p-5">
+                    <p className="text-xs font-bold uppercase tracking-wider text-orange">
+                      Reputación
+                    </p>
+                    <h2 className="mt-1 font-display text-lg font-bold">
+                      ¿Realizaste un trato?
+                    </h2>
+                    <p className="mt-2 text-sm leading-6 text-muted">
+                      Si el vendedor confirma que realizaron un trato, podrás
+                      dejar una reseña.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => void requestInteraction()}
+                      disabled={isRequestingInteraction}
+                      className="mt-4 w-full rounded-xl bg-orange px-4 py-2.5 text-sm font-bold text-white transition hover:bg-orange-dark disabled:cursor-wait disabled:opacity-60"
+                    >
+                      {!user
+                        ? "Solicitar confirmación de trato"
+                        : isRequestingInteraction
+                          ? "Enviando…"
+                          : "Solicitar confirmación de trato"}
+                    </button>
+                    {interactionMessage && (
+                      <p
+                        role="status"
+                        className="mt-3 text-sm font-semibold text-emerald-700"
+                      >
+                        {interactionMessage}
+                      </p>
+                    )}
+                    {interactionError && (
+                      <p
+                        role="alert"
+                        className="mt-3 text-sm font-semibold text-red-700"
+                      >
+                        {interactionError}
+                      </p>
+                    )}
+                  </section>
+                )}
               </div>
             </div>
             <div className="grid lg:grid-cols-2" style={{ gap: "3rem" }}>

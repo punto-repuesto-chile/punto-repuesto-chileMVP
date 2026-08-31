@@ -24,6 +24,7 @@ import {
 import { StaggerGroup } from "./components/animation/Reveal"
 
 import PublicListingCard from "./components/listings/PublicListingCard"
+
 import PublicSalvageYardCard from "./components/salvage/PublicSalvageYardCard"
 
 import PublicListingsSkeleton from "./components/listings/PublicListingsSkeleton"
@@ -39,7 +40,9 @@ import { useAuth } from "./context/AuthContext"
 import { useFavorites } from "./context/FavoritesContext"
 
 import { getPublicSalvageYards } from "./services/salvageYardService"
+
 import type { PublicSalvageYard } from "./types/salvageYard"
+
 import type { Desarmaduria } from "./data/marketplace"
 
 import {
@@ -954,6 +957,14 @@ function Navbar() {
                     </Link>
                     <Link
                       role="menuitem"
+                      to="/mis-tratos"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="block w-full rounded-lg px-3 py-2 text-left text-sm text-petrol-dark hover:bg-bg"
+                    >
+                      Mis tratos
+                    </Link>
+                    <Link
+                      role="menuitem"
                       to="/mi-desarmaduria"
                       onClick={() => setUserMenuOpen(false)}
                       className="block w-full rounded-lg px-3 py-2 text-left text-sm text-petrol-dark hover:bg-bg"
@@ -1133,6 +1144,13 @@ function Navbar() {
                     className="col-span-2 rounded-lg bg-white px-2 py-2 text-center text-xs font-semibold text-petrol"
                   >
                     Mis publicaciones
+                  </Link>
+                  <Link
+                    to="/mis-tratos"
+                    onClick={() => setMobileOpen(false)}
+                    className="col-span-2 rounded-lg bg-white px-2 py-2 text-center text-xs font-semibold text-petrol"
+                  >
+                    Mis tratos
                   </Link>
                   <Link
                     to="/favoritos"
@@ -1597,9 +1615,7 @@ function Hero() {
               {QUICK_LINKS.map((ql) => (
                 <motion.button
                   type="button"
-                  whileHover={
-                    reduceMotion ? undefined : { y: -2, scale: 1.03 }
-                  }
+                  whileHover={reduceMotion ? undefined : { y: -2, scale: 1.03 }}
                   whileTap={{ scale: 0.95 }}
                   key={ql}
                   onClick={() => handleQuickSearch(ql)}
@@ -2190,12 +2206,16 @@ function DesarmCard({ d }: { d: Desarmaduria }) {
 
 function Desarmaduras() {
   const [yards, setYards] = useState<PublicSalvageYard[]>([])
+
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
     void getPublicSalvageYards()
+
       .then((result) => setYards(result.slice(0, 3)))
+
       .catch(() => setYards([]))
+
       .finally(() => setLoaded(true))
   }, [])
 

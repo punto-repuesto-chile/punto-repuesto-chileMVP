@@ -38,6 +38,8 @@ import UpdatePasswordPage from "./pages/UpdatePasswordPage"
 
 import MySalvageYardPage from "./pages/MySalvageYardPage"
 
+import MyReviewInteractionsPage from "./pages/MyReviewInteractionsPage"
+
 import RegisterSalvageYardPage from "./pages/RegisterSalvageYardPage"
 import SalvageYardsPage from "./pages/SalvageYardsPage"
 import SalvageYardProfilePage from "./pages/SalvageYardProfilePage"
@@ -122,6 +124,14 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               element={
                 <ProtectedRoute>
                   <MyListingsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/mis-tratos"
+              element={
+                <ProtectedRoute>
+                  <MyReviewInteractionsPage />
                 </ProtectedRoute>
               }
             />
