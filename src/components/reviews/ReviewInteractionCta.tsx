@@ -1,23 +1,33 @@
 import { useState } from "react"
+
 import { useLocation, useNavigate } from "react-router-dom"
+
 import { useAuth } from "../../context/AuthContext"
+
 import { requestReviewInteraction } from "../../services/reviewService"
 
 type ReviewInteractionCtaProps = {
   listingId: string
+
   sellerId: string
 }
 
-// MVP temporal: reemplazar por conversación → trato cuando exista el chat.
+// MVP temporal: reemplazar por chat → trato → confirmación bilateral → reseña.
 export default function ReviewInteractionCta({
   listingId,
+
   sellerId,
 }: ReviewInteractionCtaProps) {
   const location = useLocation()
+
   const navigate = useNavigate()
+
   const { user } = useAuth()
+
   const [message, setMessage] = useState<string | null>(null)
+
   const [error, setError] = useState<string | null>(null)
+
   const [isRequesting, setIsRequesting] = useState(false)
 
   if (user?.id === sellerId) return null
@@ -27,15 +37,21 @@ export default function ReviewInteractionCta({
       navigate("/login", {
         state: { from: location.pathname, reason: "review" },
       })
+
       return
     }
+
     if (isRequesting) return
 
     setIsRequesting(true)
+
     setError(null)
+
     setMessage(null)
+
     try {
       await requestReviewInteraction(listingId)
+
       setMessage(
         "Solicitud enviada. Si el vendedor confirma el trato, podrás dejar una reseña.",
       )

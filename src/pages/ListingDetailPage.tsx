@@ -17,7 +17,9 @@ import ListingDetailSkeleton from "../components/listings/ListingDetailSkeleton"
 import ListingGallery from "../components/listings/ListingGallery"
 
 import SellerContactCard from "../components/listings/SellerContactCard"
+
 import ReputationSection from "../components/reviews/ReputationSection"
+
 import ReviewInteractionCta from "../components/reviews/ReviewInteractionCta"
 
 import {
@@ -34,6 +36,7 @@ import {
   getSalvageYardReputation,
   getSellerReputation,
 } from "../services/reviewService"
+
 import type { PublicReview, ReputationSummary } from "../types/review"
 
 export default function ListingDetailPage() {
@@ -52,9 +55,13 @@ export default function ListingDetailPage() {
   const [requestNumber, setRequestNumber] = useState(0)
 
   const [listingReviews, setListingReviews] = useState<PublicReview[]>([])
+
   const [reviewTotal, setReviewTotal] = useState(0)
+
   const [reputation, setReputation] = useState<ReputationSummary | null>(null)
+
   const [isReviewsLoading, setIsReviewsLoading] = useState(false)
+
   const [reviewsError, setReviewsError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -125,10 +132,15 @@ export default function ListingDetailPage() {
 
   useEffect(() => {
     if (!listing) return
+
     let active = true
+
     setIsReviewsLoading(true)
+
     setReviewsError(null)
+
     setListingReviews([])
+
     setReviewTotal(0)
 
     const reputationRequest = listing.salvageYardId
@@ -137,22 +149,30 @@ export default function ListingDetailPage() {
 
     void Promise.all([
       getListingReviews(listing.id, { limit: 10, offset: 0 }),
+
       reputationRequest,
     ])
+
       .then(([reviewsResult, reputationResult]) => {
         if (!active) return
+
         setListingReviews(reviewsResult.reviews)
+
         setReviewTotal(reviewsResult.totalCount)
+
         setReputation(reputationResult)
       })
+
       .catch((reviewsRequestError: unknown) => {
         if (!active) return
+
         setReviewsError(
           reviewsRequestError instanceof Error
             ? reviewsRequestError.message
             : "No pudimos cargar la reputación.",
         )
       })
+
       .finally(() => {
         if (active) setIsReviewsLoading(false)
       })
@@ -164,19 +184,26 @@ export default function ListingDetailPage() {
 
   const loadMoreReviews = async () => {
     if (!listing || isReviewsLoading) return
+
     setIsReviewsLoading(true)
+
     setReviewsError(null)
+
     try {
       const result = await getListingReviews(listing.id, {
         limit: 10,
+
         offset: listingReviews.length,
       })
+
       setListingReviews((current) => [
         ...current,
+
         ...result.reviews.filter(
           (review) => !current.some((item) => item.id === review.id),
         ),
       ])
+
       setReviewTotal(result.totalCount)
     } catch (reviewsRequestError) {
       setReviewsError(
@@ -267,11 +294,8 @@ export default function ListingDetailPage() {
             </Link>
           </div>
         ) : (
-          <div className="flex flex-col" style={{ gap: "4rem" }}>
-            <div
-              className="relative grid items-start lg:grid-cols-[1.12fr_0.88fr]"
-              style={{ gap: "3rem" }}
-            >
+          <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1.12fr)_minmax(20rem,0.88fr)] lg:gap-x-12 lg:gap-y-10">
+            <div className="relative min-w-0 lg:col-start-1 lg:row-start-1">
               <FavoriteButton
                 listingId={listing.id}
                 className="absolute right-3 top-3 z-20 sm:right-4 sm:top-4"
@@ -285,8 +309,14 @@ export default function ListingDetailPage() {
                 commune={listing.commune}
                 stock={listing.stock}
               />
-              <div className="flex flex-col" style={{ gap: "2.75rem" }}>
-                <ListingDetails listing={listing} />
+            </div>
+
+            <div className="min-w-0 lg:col-start-1 lg:row-start-2">
+              <ListingDetails listing={listing} />
+            </div>
+
+            <aside className="min-w-0 lg:col-start-2 lg:row-start-1 lg:row-span-5">
+              <div className="flex flex-col gap-8 lg:sticky lg:top-24">
                 <SellerContactCard
                   name={listing.contactName}
                   phone={listing.contactPhone}
@@ -299,30 +329,41 @@ export default function ListingDetailPage() {
                   sellerId={listing.sellerId}
                 />
               </div>
-            </div>
-            <div className="grid lg:grid-cols-2" style={{ gap: "3rem" }}>
+            </aside>
+
+            <div className="min-w-0 lg:col-start-1 lg:row-start-3">
               <ListingCompatibility listing={listing} />
+            </div>
+
+            <div className="min-w-0 lg:col-start-1 lg:row-start-4">
               <ListingDelivery methods={listing.deliveryMethods} />
             </div>
-            {reviewsError && (
-              <p role="alert" className="text-sm font-semibold text-red-700">
-                {reviewsError}
-              </p>
-            )}
-            <ReputationSection
-              summary={reputation}
-              reviews={listingReviews}
-              isLoading={isReviewsLoading}
-              hasMore={listingReviews.length < reviewTotal}
-              onLoadMore={() => void loadMoreReviews()}
-              summaryLabel={
-                listing.salvageYardId
-                  ? "Reputación de la desarmaduría"
-                  : "Reputación del vendedor"
-              }
-              title="Reseñas de compradores de esta publicación"
-              emptyText="No hay reseñas asociadas a esta publicación todavía."
-            />
+
+            <div className="min-w-0 lg:col-start-1 lg:row-start-5">
+              {reviewsError && (
+                <p
+                  role="alert"
+                  className="mb-4 text-sm font-semibold text-red-700"
+                >
+                  {reviewsError}
+                </p>
+              )}
+              <ReputationSection
+                summary={reputation}
+                reviews={listingReviews}
+                isLoading={isReviewsLoading}
+                hasMore={listingReviews.length < reviewTotal}
+                onLoadMore={() => void loadMoreReviews()}
+                summaryLabel={
+                  listing.salvageYardId
+                    ? "Reputación de la desarmaduría"
+                    : "Reputación del vendedor"
+                }
+                title="Reseñas de compradores de esta publicación"
+                emptyText="No hay reseñas asociadas a esta publicación todavía."
+                className="mt-0"
+              />
+            </div>
           </div>
         )}
       </main>

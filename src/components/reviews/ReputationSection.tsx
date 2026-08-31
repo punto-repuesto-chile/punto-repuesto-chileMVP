@@ -14,9 +14,13 @@ type ReputationSectionProps = {
   hasMore?: boolean
 
   onLoadMore?: () => void
+
   title?: string
+
   summaryLabel?: string
+
   emptyText?: string
+  className?: string
 }
 
 export default function ReputationSection({
@@ -29,12 +33,16 @@ export default function ReputationSection({
   hasMore,
 
   onLoadMore,
+
   title = "Opiniones de la comunidad",
+
   summaryLabel = "Reputación",
+
   emptyText,
+  className = "mt-12",
 }: ReputationSectionProps) {
   return (
-    <section className="mt-12" aria-labelledby="reputation-title">
+    <section className={className} aria-labelledby="reputation-title">
       <div className="flex flex-col gap-5 rounded-3xl border border-border bg-white p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-8">
         <div>
           <p className="text-xs font-bold uppercase tracking-wider text-orange">
