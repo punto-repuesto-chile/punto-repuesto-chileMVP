@@ -37,6 +37,7 @@ export default function ListingGallery({
   commune,
 
   stock,
+  showSummary = true,
 }: {
   images: PublishedListingImage[]
 
@@ -51,6 +52,8 @@ export default function ListingGallery({
   commune: string
 
   stock: number
+
+  showSummary?: boolean
 }) {
   const orderedImages = useMemo(() => {
     const imagesByPosition = [...images].sort(
@@ -138,32 +141,34 @@ export default function ListingGallery({
 
   return (
     <div className="min-w-0">
-      <div className="mb-5 rounded-2xl border border-border bg-white p-5 shadow-sm sm:p-6">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 ring-1 ring-inset ring-emerald-200">
-            Publicada
-          </span>
-          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700">
-            {CONDITION_LABELS[condition]}
-          </span>
-          <span className="text-xs font-bold uppercase tracking-wider text-orange">
-            {category}
-          </span>
-        </div>
-        <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="font-display text-xl font-extrabold leading-tight text-petrol-dark sm:text-2xl">
-              {title}
-            </h2>
-            <p className="mt-2 text-sm text-muted">
-              {commune} · {stock} {stock === 1 ? "unidad" : "unidades"}
+      {showSummary && (
+        <div className="mb-5 rounded-2xl border border-border bg-white p-5 shadow-sm sm:p-6">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 ring-1 ring-inset ring-emerald-200">
+              Publicada
+            </span>
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700">
+              {CONDITION_LABELS[condition]}
+            </span>
+            <span className="text-xs font-bold uppercase tracking-wider text-orange">
+              {category}
+            </span>
+          </div>
+          <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="font-display text-xl font-extrabold leading-tight text-petrol-dark sm:text-2xl">
+                {title}
+              </h2>
+              <p className="mt-2 text-sm text-muted">
+                {commune} · {stock} {stock === 1 ? "unidad" : "unidades"}
+              </p>
+            </div>
+            <p className="font-display text-xl font-extrabold text-petrol sm:text-2xl">
+              {PRICE_FORMATTER.format(price)}
             </p>
           </div>
-          <p className="font-display text-xl font-extrabold text-petrol sm:text-2xl">
-            {PRICE_FORMATTER.format(price)}
-          </p>
         </div>
-      </div>
+      )}
       <div
         className="relative flex items-center justify-center overflow-hidden rounded-2xl border border-border bg-white shadow-sm"
         style={{ height: "clamp(270px, 34vw, 440px)" }}
