@@ -294,29 +294,66 @@ export default function ListingDetailPage() {
             </Link>
           </div>
         ) : (
-          <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1.12fr)_minmax(20rem,0.88fr)] lg:gap-x-12 lg:gap-y-10">
-            <div className="relative min-w-0 lg:col-start-1 lg:row-start-1">
-              <FavoriteButton
-                listingId={listing.id}
-                className="absolute right-3 top-3 z-20 sm:right-4 sm:top-4"
-              />
-              <ListingGallery
-                images={listing.images}
-                title={listing.title}
-                category={listing.category}
-                condition={listing.condition}
-                price={listing.price}
-                commune={listing.commune}
-                stock={listing.stock}
-              />
+          <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1.65fr)_minmax(18rem,0.75fr)] lg:gap-x-12 lg:gap-y-10 xl:grid-cols-[minmax(0,1.8fr)_minmax(20rem,0.8fr)]">
+            <div className="contents lg:col-start-1 lg:row-start-1 lg:flex lg:min-w-0 lg:flex-col lg:gap-10">
+              <div className="relative order-2 min-w-0 lg:order-none">
+                <FavoriteButton
+                  listingId={listing.id}
+                  className="absolute right-3 top-3 z-20 sm:right-4 sm:top-4"
+                />
+                <ListingGallery
+                  images={listing.images}
+                  title={listing.title}
+                  category={listing.category}
+                  condition={listing.condition}
+                  price={listing.price}
+                  commune={listing.commune}
+                  stock={listing.stock}
+                  showSummary={false}
+                />
+              </div>
+
+              <div className="order-4 min-w-0 lg:order-none">
+                <ListingCompatibility listing={listing} />
+              </div>
+
+              <div className="order-5 min-w-0 lg:order-none">
+                <ListingDelivery methods={listing.deliveryMethods} />
+              </div>
+
+              <div className="order-6 min-w-0 lg:order-none">
+                {reviewsError && (
+                  <p
+                    role="alert"
+                    className="mb-4 text-sm font-semibold text-red-700"
+                  >
+                    {reviewsError}
+                  </p>
+                )}
+                <ReputationSection
+                  summary={reputation}
+                  reviews={listingReviews}
+                  isLoading={isReviewsLoading}
+                  hasMore={listingReviews.length < reviewTotal}
+                  onLoadMore={() => void loadMoreReviews()}
+                  summaryLabel={
+                    listing.salvageYardId
+                      ? "Reputación de la desarmaduría"
+                      : "Reputación del vendedor"
+                  }
+                  title="Reseñas de compradores de esta publicación"
+                  emptyText="No hay reseñas asociadas a esta publicación todavía."
+                  className="mt-0"
+                />
+              </div>
             </div>
 
-            <div className="min-w-0 lg:col-start-1 lg:row-start-2">
-              <ListingDetails listing={listing} />
-            </div>
+            <aside className="contents lg:sticky lg:top-24 lg:col-start-2 lg:row-start-1 lg:flex lg:min-w-0 lg:flex-col lg:gap-8 lg:self-start">
+              <div className="order-1 min-w-0 lg:order-none">
+                <ListingDetails listing={listing} />
+              </div>
 
-            <aside className="min-w-0 lg:col-start-2 lg:row-start-1 lg:row-span-5">
-              <div className="flex flex-col gap-8 lg:sticky lg:top-24">
+              <div className="order-3 min-w-0 lg:order-none">
                 <SellerContactCard
                   name={listing.contactName}
                   phone={listing.contactPhone}
@@ -324,46 +361,15 @@ export default function ListingDetailPage() {
                   sellerId={listing.sellerId}
                   salvageYard={salvageYard}
                 />
+              </div>
+
+              <div className="order-7 min-w-0 lg:order-none">
                 <ReviewInteractionCta
                   listingId={listing.id}
                   sellerId={listing.sellerId}
                 />
               </div>
             </aside>
-
-            <div className="min-w-0 lg:col-start-1 lg:row-start-3">
-              <ListingCompatibility listing={listing} />
-            </div>
-
-            <div className="min-w-0 lg:col-start-1 lg:row-start-4">
-              <ListingDelivery methods={listing.deliveryMethods} />
-            </div>
-
-            <div className="min-w-0 lg:col-start-1 lg:row-start-5">
-              {reviewsError && (
-                <p
-                  role="alert"
-                  className="mb-4 text-sm font-semibold text-red-700"
-                >
-                  {reviewsError}
-                </p>
-              )}
-              <ReputationSection
-                summary={reputation}
-                reviews={listingReviews}
-                isLoading={isReviewsLoading}
-                hasMore={listingReviews.length < reviewTotal}
-                onLoadMore={() => void loadMoreReviews()}
-                summaryLabel={
-                  listing.salvageYardId
-                    ? "Reputación de la desarmaduría"
-                    : "Reputación del vendedor"
-                }
-                title="Reseñas de compradores de esta publicación"
-                emptyText="No hay reseñas asociadas a esta publicación todavía."
-                className="mt-0"
-              />
-            </div>
           </div>
         )}
       </main>
