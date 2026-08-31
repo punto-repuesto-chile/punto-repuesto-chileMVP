@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
+
 import { Link } from "react-router-dom"
+
 import SiteFooter from "../components/layout/SiteFooter"
+
 import ReviewComposer from "../components/reviews/ReviewComposer"
+
 import {
   createReview,
   deleteReview,
@@ -11,6 +15,7 @@ import {
   respondReviewInteraction,
   updateReview,
 } from "../services/reviewService"
+
 import type {
   Review,
   ReviewInteractionAction,
@@ -20,8 +25,11 @@ import type {
 function statusLabel(status: ReviewInteractionListItem["status"]): string {
   return {
     pending: "Pendiente",
+
     confirmed: "Confirmado",
+
     rejected: "Rechazado",
+
     expired: "Expirado",
   }[status]
 }
@@ -34,35 +42,56 @@ function interactionTarget(item: ReviewInteractionListItem): string {
 
 function friendlyError(error: unknown): string {
   if (error instanceof Error && error.message) return error.message
+
   return "No pudimos completar esta acción. Inténtalo nuevamente."
 }
 
+const REVIEW_EDIT_WINDOW_MS = 30 * 60 * 1000
+
 export default function MyReviewInteractionsPage() {
   const [tab, setTab] = useState<"sent" | "received">("sent")
+
   const [sent, setSent] = useState<ReviewInteractionListItem[]>([])
+
   const [received, setReceived] = useState<ReviewInteractionListItem[]>([])
+
   const [reviews, setReviews] = useState<Review[]>([])
+
   const [isLoading, setIsLoading] = useState(true)
+
   const [error, setError] = useState<string | null>(null)
+
   const [actionId, setActionId] = useState<string | null>(null)
+
   const [rejectId, setRejectId] = useState<string | null>(null)
+
   const [composer, setComposer] = useState<{
     interactionId: string
+
     review?: Review
   } | null>(null)
+
   const [composerError, setComposerError] = useState<string | null>(null)
+  const [now, setNow] = useState(() => Date.now())
 
   const load = useCallback(async () => {
     setIsLoading(true)
+
     setError(null)
+
     try {
       const [sentItems, receivedItems, ownReviews] = await Promise.all([
         getMySentReviewInteractions(),
+
         getMyReceivedReviewInteractions(),
+
         getMyReviews(),
       ])
+
       setSent(sentItems)
+
       setReceived(receivedItems)
+
       setReviews(ownReviews)
     } catch (loadError) {
       setError(friendlyError(loadError))
@@ -75,25 +104,37 @@ export default function MyReviewInteractionsPage() {
     void load()
   }, [load])
 
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 30_000)
+    return () => window.clearInterval(timer)
+  }, [])
+
   const reviewByInteraction = useMemo(
     () => new Map(reviews.map((review) => [review.interactionId, review])),
+
     [reviews],
   )
+
   const items = tab === "sent" ? sent : received
 
   const respond = async (
     interactionId: string,
+
     action: ReviewInteractionAction,
   ) => {
     setActionId(interactionId)
+
     setError(null)
+
     try {
       const next = await respondReviewInteraction(interactionId, action)
+
       setReceived((current) =>
         current.map((item) =>
           item.id === interactionId ? { ...item, status: next.status } : item,
         ),
       )
+
       setRejectId(null)
     } catch (respondError) {
       setError(friendlyError(respondError))
@@ -104,17 +145,22 @@ export default function MyReviewInteractionsPage() {
 
   const submitReview = async (rating: number, comment: string | null) => {
     if (!composer) return
+
     setActionId(composer.interactionId)
+
     setComposerError(null)
+
     try {
       const next = composer.review
         ? await updateReview(composer.review.id, rating, comment)
         : await createReview(composer.interactionId, rating, comment)
+
       setReviews((current) =>
         composer.review
           ? current.map((review) => (review.id === next.id ? next : review))
           : [next, ...current],
       )
+
       setComposer(null)
     } catch (reviewError) {
       setComposerError(friendlyError(reviewError))
@@ -126,14 +172,22 @@ export default function MyReviewInteractionsPage() {
   const removeReview = async (review: Review) => {
     if (
       !window.confirm(
-        "¿Eliminar esta reseña? Esta acción no se puede deshacer.",
+        "¿Retirar esta reseña? Dejará de ser pública y no podrás crear otra para este trato.",
       )
     )
       return
+
     setActionId(review.id)
+
     try {
       await deleteReview(review.id)
-      setReviews((current) => current.filter((item) => item.id !== review.id))
+      setReviews((current) =>
+        current.map((item) =>
+          item.id === review.id
+            ? { ...item, status: "deleted", comment: null }
+            : item,
+        ),
+      )
     } catch (deleteError) {
       setError(friendlyError(deleteError))
     } finally {
@@ -223,6 +277,12 @@ export default function MyReviewInteractionsPage() {
           <div className="mt-6 space-y-4">
             {items.map((item) => {
               const review = reviewByInteraction.get(item.id)
+              const canEditReview = Boolean(
+                review?.status === "published" &&
+                  now <=
+                    new Date(review.createdAt).getTime() +
+                      REVIEW_EDIT_WINDOW_MS,
+              )
               return (
                 <article
                   key={item.id}
@@ -311,32 +371,47 @@ export default function MyReviewInteractionsPage() {
                     (review ? (
                       <div className="mt-4 flex flex-wrap items-center gap-3">
                         <span className="text-sm font-semibold text-emerald-700">
-                          Reseña publicada
+                          {review.status === "deleted"
+                            ? "Reseña retirada"
+                            : review.status === "hidden"
+                              ? "Reseña no visible"
+                              : "Reseña publicada"}
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setComposerError(null)
-                            setComposer({ interactionId: item.id, review })
-                          }}
-                          className="text-sm font-bold text-petrol hover:text-orange"
-                        >
-                          Editar reseña
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void removeReview(review)}
-                          disabled={actionId === review.id}
-                          className="text-sm font-bold text-red-600 hover:underline"
-                        >
-                          Eliminar reseña
-                        </button>
+                        {canEditReview && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setComposerError(null)
+                              setComposer({ interactionId: item.id, review })
+                            }}
+                            className="text-sm font-bold text-petrol hover:text-orange"
+                          >
+                            Editar reseña
+                          </button>
+                        )}
+                        {review.status !== "deleted" && (
+                          <button
+                            type="button"
+                            onClick={() => void removeReview(review)}
+                            disabled={actionId === review.id}
+                            className="text-sm font-bold text-red-600 hover:underline"
+                          >
+                            Retirar reseña
+                          </button>
+                        )}
+                        {review.status === "published" && !canEditReview && (
+                          <p className="basis-full text-xs text-muted">
+                            Las reseñas pueden editarse durante 30 minutos
+                            después de publicarse.
+                          </p>
+                        )}
                       </div>
                     ) : (
                       <button
                         type="button"
                         onClick={() => {
                           setComposerError(null)
+
                           setComposer({ interactionId: item.id })
                         }}
                         className="mt-4 rounded-xl bg-orange px-4 py-2.5 text-sm font-bold text-white hover:bg-orange-dark"
