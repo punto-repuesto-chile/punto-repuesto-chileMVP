@@ -914,7 +914,7 @@ function Navbar() {
                   onClick={() => setUserMenuOpen((current) => !current)}
                   aria-expanded={userMenuOpen}
                   aria-haspopup="menu"
-                  className="flex items-center gap-2 rounded-xl px-2 py-1.5 text-sm font-semibold text-petrol-dark hover:bg-bg"
+                  className="flex cursor-pointer items-center gap-2 rounded-xl px-2 py-1.5 text-sm font-semibold text-petrol-dark transition-colors hover:bg-slate-200"
                 >
                   {publicAvatarUrl ? (
                     <img
@@ -1317,6 +1317,12 @@ function Hero() {
     navigateToSearch()
   }
 
+  const handleQuickSearch = (term: string) => {
+    setQuery(term)
+
+    navigate(`/buscar?q=${encodeURIComponent(term)}`)
+  }
+
   return (
     <motion.section
       initial="hidden"
@@ -1531,7 +1537,9 @@ function Hero() {
 
                           if (label === "Marca") setModel("")
                         }}
-                        className={`${selectClass} disabled:cursor-not-allowed disabled:bg-slate-100`}
+                        className={`${selectClass} ${
+                          label.startsWith("Regi") ? "pr-8 text-xs" : ""
+                        } disabled:cursor-not-allowed disabled:bg-slate-100`}
                         style={{
                           borderColor: "#DCE3E6",
 
@@ -1567,7 +1575,7 @@ function Hero() {
                 type="submit"
                 whileHover={reduceMotion ? undefined : { y: -2, scale: 1.01 }}
                 whileTap={{ scale: 0.98 }}
-                className="w-full py-3 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 transition-opacity hover:opacity-90 active:opacity-80 focus:outline-none focus:ring-2 focus:ring-orange/30"
+                className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 active:opacity-80 focus:outline-none focus:ring-2 focus:ring-orange/30"
                 style={{ background: "#F97316" }}
               >
                 <IconSearch />
@@ -1578,26 +1586,24 @@ function Hero() {
             {/* Quick links */}
             <motion.div
               variants={heroItem}
-              className="mt-5 flex flex-wrap gap-2"
+              className="mt-5 flex flex-wrap items-center gap-2"
             >
               <span
-                className="text-xs font-medium"
+                className="inline-flex min-h-7 items-center text-xs font-medium"
                 style={{ color: "#64757D" }}
               >
                 Búsquedas rápidas:
               </span>
               {QUICK_LINKS.map((ql) => (
                 <motion.button
-                  whileTap={{ scale: 0.97 }}
+                  type="button"
+                  whileHover={
+                    reduceMotion ? undefined : { y: -2, scale: 1.03 }
+                  }
+                  whileTap={{ scale: 0.95 }}
                   key={ql}
-                  className="text-xs px-3 py-1 rounded-full border font-medium transition-colors hover:border-opacity-60"
-                  style={{
-                    borderColor: "#DCE3E6",
-
-                    color: "#123B4A",
-
-                    background: "#fff",
-                  }}
+                  onClick={() => handleQuickSearch(ql)}
+                  className="cursor-pointer rounded-full border border-border bg-white px-3 py-1 text-xs font-medium text-petrol transition-[color,background-color,border-color,box-shadow] duration-200 hover:border-orange/50 hover:bg-orange-50 hover:text-orange hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-orange/30"
                 >
                   {ql}
                 </motion.button>
