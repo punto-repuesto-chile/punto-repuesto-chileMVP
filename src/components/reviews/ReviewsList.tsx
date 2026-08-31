@@ -1,38 +1,59 @@
 import { useState } from "react"
+
 import type { PublicReview } from "../../types/review"
+
 import { getProfileAvatarPublicUrl } from "../../services/profileService"
+
 import StarRating from "./StarRating"
 
 type ReviewsListProps = {
   reviews: PublicReview[]
+
   isLoading?: boolean
+
   hasMore?: boolean
+
   onLoadMore?: () => void
+
   ownReviews?: PublicReview[]
+
   onEdit?: (review: PublicReview) => void
+
   onDelete?: (review: PublicReview) => void
+  emptyText?: string
 }
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat("es-CL", {
     day: "numeric",
+
     month: "long",
+
     year: "numeric",
   }).format(new Date(value))
 }
 
 export default function ReviewsList({
   reviews,
+
   isLoading = false,
+
   hasMore = false,
+
   onLoadMore,
+
   ownReviews = [],
+
   onEdit,
+
   onDelete,
+  emptyText = "Aún no hay reseñas.",
 }: ReviewsListProps) {
   const [openMenu, setOpenMenu] = useState<string | null>(null)
+
   const allReviews = [
     ...ownReviews,
+
     ...reviews.filter(
       (review) => !ownReviews.some((own) => own.id === review.id),
     ),
@@ -49,7 +70,7 @@ export default function ReviewsList({
   if (allReviews.length === 0)
     return (
       <p className="mt-5 rounded-2xl border border-dashed border-border bg-white px-5 py-8 text-center text-sm text-muted">
-        Aún no hay reseñas.
+        {emptyText}
       </p>
     )
 
@@ -102,6 +123,7 @@ export default function ReviewsList({
                         type="button"
                         onClick={() => {
                           setOpenMenu(null)
+
                           onEdit(review)
                         }}
                         className="block w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-petrol-dark hover:bg-bg"
@@ -112,6 +134,7 @@ export default function ReviewsList({
                         type="button"
                         onClick={() => {
                           setOpenMenu(null)
+
                           onDelete(review)
                         }}
                         className="block w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-red-600 hover:bg-red-50"

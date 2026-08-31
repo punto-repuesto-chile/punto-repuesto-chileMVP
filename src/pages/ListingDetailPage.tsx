@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
+import { Link, useParams } from "react-router-dom"
 
 import SiteFooter from "../components/layout/SiteFooter"
 
@@ -17,6 +17,8 @@ import ListingDetailSkeleton from "../components/listings/ListingDetailSkeleton"
 import ListingGallery from "../components/listings/ListingGallery"
 
 import SellerContactCard from "../components/listings/SellerContactCard"
+import ReputationSection from "../components/reviews/ReputationSection"
+import ReviewInteractionCta from "../components/reviews/ReviewInteractionCta"
 
 import {
   getPublishedListingById,
@@ -26,14 +28,16 @@ import {
 import { getPublicSalvageYard } from "../services/salvageYardService"
 
 import type { PublicSalvageYard } from "../types/salvageYard"
-import { useAuth } from "../context/AuthContext"
-import { requestReviewInteraction } from "../services/reviewService"
+
+import {
+  getListingReviews,
+  getSalvageYardReputation,
+  getSellerReputation,
+} from "../services/reviewService"
+import type { PublicReview, ReputationSummary } from "../types/review"
 
 export default function ListingDetailPage() {
   const { id = "" } = useParams<{ id: string }>()
-  const location = useLocation()
-  const navigate = useNavigate()
-  const { user } = useAuth()
 
   const [listing, setListing] = useState<PublishedListing | null>(null)
 
@@ -46,11 +50,12 @@ export default function ListingDetailPage() {
   const [error, setError] = useState<string | null>(null)
 
   const [requestNumber, setRequestNumber] = useState(0)
-  const [interactionMessage, setInteractionMessage] = useState<string | null>(
-    null,
-  )
-  const [interactionError, setInteractionError] = useState<string | null>(null)
-  const [isRequestingInteraction, setIsRequestingInteraction] = useState(false)
+
+  const [listingReviews, setListingReviews] = useState<PublicReview[]>([])
+  const [reviewTotal, setReviewTotal] = useState(0)
+  const [reputation, setReputation] = useState<ReputationSummary | null>(null)
+  const [isReviewsLoading, setIsReviewsLoading] = useState(false)
+  const [reviewsError, setReviewsError] = useState<string | null>(null)
 
   useEffect(() => {
     let active = true
@@ -83,7 +88,9 @@ export default function ListingDetailPage() {
 
           if (!yard) {
             setListing(null)
+
             setNotFound(true)
+
             return
           }
 
@@ -116,31 +123,69 @@ export default function ListingDetailPage() {
     }
   }, [id, requestNumber])
 
-  const requestInteraction = async () => {
-    if (!user) {
-      navigate("/login", {
-        state: { from: location.pathname, reason: "review" },
+  useEffect(() => {
+    if (!listing) return
+    let active = true
+    setIsReviewsLoading(true)
+    setReviewsError(null)
+    setListingReviews([])
+    setReviewTotal(0)
+
+    const reputationRequest = listing.salvageYardId
+      ? getSalvageYardReputation(listing.salvageYardId)
+      : getSellerReputation(listing.sellerId)
+
+    void Promise.all([
+      getListingReviews(listing.id, { limit: 10, offset: 0 }),
+      reputationRequest,
+    ])
+      .then(([reviewsResult, reputationResult]) => {
+        if (!active) return
+        setListingReviews(reviewsResult.reviews)
+        setReviewTotal(reviewsResult.totalCount)
+        setReputation(reputationResult)
       })
-      return
+      .catch((reviewsRequestError: unknown) => {
+        if (!active) return
+        setReviewsError(
+          reviewsRequestError instanceof Error
+            ? reviewsRequestError.message
+            : "No pudimos cargar la reputación.",
+        )
+      })
+      .finally(() => {
+        if (active) setIsReviewsLoading(false)
+      })
+
+    return () => {
+      active = false
     }
-    if (!listing || user.id === listing.sellerId || isRequestingInteraction)
-      return
-    setIsRequestingInteraction(true)
-    setInteractionError(null)
-    setInteractionMessage(null)
+  }, [listing])
+
+  const loadMoreReviews = async () => {
+    if (!listing || isReviewsLoading) return
+    setIsReviewsLoading(true)
+    setReviewsError(null)
     try {
-      await requestReviewInteraction(listing.id)
-      setInteractionMessage(
-        "Solicitud enviada. Si el vendedor confirma el trato, podrás dejar una reseña.",
-      )
-    } catch (requestError) {
-      setInteractionError(
-        requestError instanceof Error
-          ? requestError.message
-          : "No pudimos enviar la solicitud de trato.",
+      const result = await getListingReviews(listing.id, {
+        limit: 10,
+        offset: listingReviews.length,
+      })
+      setListingReviews((current) => [
+        ...current,
+        ...result.reviews.filter(
+          (review) => !current.some((item) => item.id === review.id),
+        ),
+      ])
+      setReviewTotal(result.totalCount)
+    } catch (reviewsRequestError) {
+      setReviewsError(
+        reviewsRequestError instanceof Error
+          ? reviewsRequestError.message
+          : "No pudimos cargar más reseñas.",
       )
     } finally {
-      setIsRequestingInteraction(false)
+      setIsReviewsLoading(false)
     }
   }
 
@@ -249,54 +294,35 @@ export default function ListingDetailPage() {
                   sellerId={listing.sellerId}
                   salvageYard={salvageYard}
                 />
-                {user?.id !== listing.sellerId && (
-                  <section className="rounded-2xl border border-orange/20 bg-orange/5 p-5">
-                    <p className="text-xs font-bold uppercase tracking-wider text-orange">
-                      Reputación
-                    </p>
-                    <h2 className="mt-1 font-display text-lg font-bold">
-                      ¿Realizaste un trato?
-                    </h2>
-                    <p className="mt-2 text-sm leading-6 text-muted">
-                      Si el vendedor confirma que realizaron un trato, podrás
-                      dejar una reseña.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => void requestInteraction()}
-                      disabled={isRequestingInteraction}
-                      className="mt-4 w-full rounded-xl bg-orange px-4 py-2.5 text-sm font-bold text-white transition hover:bg-orange-dark disabled:cursor-wait disabled:opacity-60"
-                    >
-                      {!user
-                        ? "Solicitar confirmación de trato"
-                        : isRequestingInteraction
-                          ? "Enviando…"
-                          : "Solicitar confirmación de trato"}
-                    </button>
-                    {interactionMessage && (
-                      <p
-                        role="status"
-                        className="mt-3 text-sm font-semibold text-emerald-700"
-                      >
-                        {interactionMessage}
-                      </p>
-                    )}
-                    {interactionError && (
-                      <p
-                        role="alert"
-                        className="mt-3 text-sm font-semibold text-red-700"
-                      >
-                        {interactionError}
-                      </p>
-                    )}
-                  </section>
-                )}
+                <ReviewInteractionCta
+                  listingId={listing.id}
+                  sellerId={listing.sellerId}
+                />
               </div>
             </div>
             <div className="grid lg:grid-cols-2" style={{ gap: "3rem" }}>
               <ListingCompatibility listing={listing} />
               <ListingDelivery methods={listing.deliveryMethods} />
             </div>
+            {reviewsError && (
+              <p role="alert" className="text-sm font-semibold text-red-700">
+                {reviewsError}
+              </p>
+            )}
+            <ReputationSection
+              summary={reputation}
+              reviews={listingReviews}
+              isLoading={isReviewsLoading}
+              hasMore={listingReviews.length < reviewTotal}
+              onLoadMore={() => void loadMoreReviews()}
+              summaryLabel={
+                listing.salvageYardId
+                  ? "Reputación de la desarmaduría"
+                  : "Reputación del vendedor"
+              }
+              title="Reseñas de compradores de esta publicación"
+              emptyText="No hay reseñas asociadas a esta publicación todavía."
+            />
           </div>
         )}
       </main>

@@ -1,34 +1,50 @@
 import type { PublicReview, ReputationSummary } from "../../types/review"
+
 import ReviewsList from "./ReviewsList"
+
 import StarRating from "./StarRating"
 
 type ReputationSectionProps = {
   summary: ReputationSummary | null
+
   reviews: PublicReview[]
+
   isLoading?: boolean
+
   hasMore?: boolean
+
   onLoadMore?: () => void
+  title?: string
+  summaryLabel?: string
+  emptyText?: string
 }
 
 export default function ReputationSection({
   summary,
+
   reviews,
+
   isLoading,
+
   hasMore,
+
   onLoadMore,
+  title = "Opiniones de la comunidad",
+  summaryLabel = "Reputación",
+  emptyText,
 }: ReputationSectionProps) {
   return (
     <section className="mt-12" aria-labelledby="reputation-title">
       <div className="flex flex-col gap-5 rounded-3xl border border-border bg-white p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-8">
         <div>
           <p className="text-xs font-bold uppercase tracking-wider text-orange">
-            Reputación
+            {summaryLabel}
           </p>
           <h2
             id="reputation-title"
             className="mt-1 font-display text-2xl font-extrabold"
           >
-            Opiniones de la comunidad
+            {title}
           </h2>
         </div>
         {summary?.reviewCount ? (
@@ -59,6 +75,7 @@ export default function ReputationSection({
         isLoading={isLoading}
         hasMore={hasMore}
         onLoadMore={onLoadMore}
+        emptyText={emptyText}
       />
     </section>
   )
