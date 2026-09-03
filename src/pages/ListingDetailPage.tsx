@@ -20,7 +20,7 @@ import SellerContactCard from "../components/listings/SellerContactCard"
 
 import ReputationSection from "../components/reviews/ReputationSection"
 
-import ReviewInteractionCta from "../components/reviews/ReviewInteractionCta"
+import ChatContactButton from "../components/listings/ChatContactButton"
 
 import {
   getPublishedListingById,
@@ -361,13 +361,12 @@ export default function ListingDetailPage() {
                   sellerId={listing.sellerId}
                   salvageYard={salvageYard}
                 />
-              </div>
-
-              <div className="order-7 min-w-0 lg:order-none">
-                <ReviewInteractionCta
-                  listingId={listing.id}
-                  sellerId={listing.sellerId}
-                />
+                <div className="mt-3">
+                  <ChatContactButton
+                    listingId={listing.id}
+                    sellerId={listing.sellerId}
+                  />
+                </div>
               </div>
             </aside>
           </div>

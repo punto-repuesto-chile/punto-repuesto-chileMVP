@@ -41,8 +41,12 @@ import MySalvageYardPage from "./pages/MySalvageYardPage"
 import MyReviewInteractionsPage from "./pages/MyReviewInteractionsPage"
 
 import RegisterSalvageYardPage from "./pages/RegisterSalvageYardPage"
+
 import SalvageYardsPage from "./pages/SalvageYardsPage"
+
 import SalvageYardProfilePage from "./pages/SalvageYardProfilePage"
+import MessagesPage from "./pages/MessagesPage"
+import ConversationPage from "./pages/ConversationPage"
 
 import "./index.css"
 
@@ -80,6 +84,22 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               }
             />
             <Route path="/publicacion/:id" element={<ListingDetailPage />} />
+            <Route
+              path="/mensajes"
+              element={
+                <ProtectedRoute>
+                  <MessagesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/mensajes/:conversationId"
+              element={
+                <ProtectedRoute>
+                  <ConversationPage />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/vendedor/:sellerId" element={<SellerProfilePage />} />
             <Route path="/buscar" element={<SearchListingsPage />} />
             <Route path="/desarmadurias" element={<SalvageYardsPage />} />
