@@ -13,7 +13,18 @@ import type {
   ReviewInteractionStatus,
   ReviewStatus,
   ReviewTargetType,
+  ConversationDeal,
 } from "../types/review"
+
+type ConversationDealRow = {
+  interaction_id: string | null
+  status: ReviewInteractionStatus | null
+  initiated_by_me: boolean | null
+  my_role: "buyer" | "seller"
+  both_messaged: boolean
+  has_review: boolean | null
+  expires_at: string | null
+}
 
 type ServiceErrorDetails = {
   code?: string
@@ -91,10 +102,15 @@ type PublicReviewRow = {
   created_at: string
 
   updated_at?: string
+
   reviewer_display_name?: string
+
   reviewer_avatar_path?: string | null
+
   public_display_name?: string
+
   public_avatar_path?: string | null
+
   total_count?: number | string
 }
 
@@ -223,8 +239,10 @@ function mapPublicReview(row: PublicReviewRow): PublicReview {
     createdAt: row.created_at,
 
     updatedAt: row.updated_at,
+
     reviewerDisplayName:
       row.reviewer_display_name ?? row.public_display_name ?? "Usuario",
+
     reviewerAvatarPath:
       row.reviewer_avatar_path ?? row.public_avatar_path ?? null,
   }
@@ -327,6 +345,62 @@ export async function requestReviewInteraction(
     )
 
   return mapInteractionResult(data as InteractionResultRow)
+}
+
+export async function getConversationDeal(
+  conversationId: string,
+): Promise<ConversationDeal> {
+  const { data, error } = await supabase
+    .rpc("get_conversation_deal", { p_conversation_id: conversationId })
+    .single()
+  if (error)
+    throwServiceError(
+      "No se pudo cargar el estado del trato.",
+      "No pudimos cargar el estado del trato.",
+      error,
+    )
+  const row = data as ConversationDealRow
+  return {
+    interactionId: row.interaction_id,
+    status: row.status,
+    initiatedByMe: row.initiated_by_me === true,
+    myRole: row.my_role,
+    bothMessaged: row.both_messaged,
+    hasReview: row.has_review === true,
+    expiresAt: row.expires_at,
+  }
+}
+
+export async function proposeDeal(conversationId: string): Promise<string> {
+  const { data, error } = await supabase.rpc("propose_deal", {
+    p_conversation_id: conversationId,
+  })
+  if (error)
+    throwServiceError(
+      "No se pudo proponer el trato.",
+      error.message.includes("both participants")
+        ? "Ambas personas deben enviar al menos un mensaje antes de proponer un trato."
+        : "No pudimos proponer el trato.",
+      error,
+    )
+  return data as string
+}
+
+export async function respondDeal(
+  interactionId: string,
+  action: ReviewInteractionAction,
+): Promise<ReviewInteractionStatus> {
+  const { data, error } = await supabase.rpc("respond_deal", {
+    p_interaction_id: interactionId,
+    p_action: action,
+  })
+  if (error)
+    throwServiceError(
+      "No se pudo responder al trato.",
+      "No pudimos actualizar el trato.",
+      error,
+    )
+  return data as ReviewInteractionStatus
 }
 
 export async function respondReviewInteraction(
@@ -493,31 +567,40 @@ export function getSalvageYardReviews(
 ): Promise<PublicReview[]> {
   return getPublicReviews(
     "get_salvage_yard_reviews",
+
     { p_salvage_yard_id: salvageYardId },
+
     page,
   )
 }
 
 export async function getListingReviews(
   listingId: string,
+
   page: PublicReviewsPage = {},
 ): Promise<ListingReviewsResult> {
   const { data, error } = await supabase.rpc("get_listing_reviews", {
     p_listing_id: listingId,
+
     p_limit: page.limit ?? 10,
+
     p_offset: page.offset ?? 0,
   })
 
   if (error)
     throwServiceError(
       "No se pudieron cargar las reseñas de la publicación.",
+
       "No pudimos cargar las reseñas de esta publicación.",
+
       error,
     )
 
   const rows = (data ?? []) as PublicReviewRow[]
+
   return {
     reviews: rows.map(mapPublicReview),
+
     totalCount: rows.length === 0 ? 0 : Number(rows[0].total_count ?? 0),
   }
 }

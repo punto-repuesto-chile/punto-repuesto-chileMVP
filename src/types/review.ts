@@ -64,11 +64,17 @@ export type Review = {
 
 export type PublicReview = {
   id: string
+
   rating: number
+
   comment: string | null
+
   createdAt: string
+
   updatedAt?: string
+
   reviewerDisplayName: string
+
   reviewerAvatarPath: string | null
 }
 
@@ -80,10 +86,22 @@ export type ReputationSummary = {
 
 export type PublicReviewsPage = {
   limit?: number
+
   offset?: number
 }
 
 export type ListingReviewsResult = {
   reviews: PublicReview[]
+
   totalCount: number
+}
+
+export type ConversationDeal = {
+  interactionId: string | null
+  status: ReviewInteractionStatus | null
+  initiatedByMe: boolean
+  myRole: "buyer" | "seller"
+  bothMessaged: boolean
+  hasReview: boolean
+  expiresAt: string | null
 }

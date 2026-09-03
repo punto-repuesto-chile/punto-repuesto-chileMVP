@@ -36,6 +36,8 @@ import {
 } from "./constants/listingCategories"
 
 import { useAuth } from "./context/AuthContext"
+import useUnreadConversationCount from "./hooks/useUnreadConversationCount"
+import NotificationBell from "./components/notifications/NotificationBell"
 
 import { useFavorites } from "./context/FavoritesContext"
 
@@ -149,6 +151,25 @@ function IconHeart({ filled = false }: { filled?: boolean }) {
       strokeLinejoin="round"
     >
       <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+    </svg>
+  )
+}
+
+function IconBell() {
+  return (
+    <svg
+      width="19"
+      height="19"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+      <path d="M10 21h4" />
     </svg>
   )
 }
@@ -610,6 +631,7 @@ function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false)
 
   const { user, signOut } = useAuth()
+  const unreadMessageCount = useUnreadConversationCount(Boolean(user))
 
   const [ownProfile, setOwnProfile] = useState<MyPublicProfile | null>(null)
 
@@ -910,6 +932,7 @@ function Navbar() {
                 </span>
               )}
             </Link>
+            <NotificationBell />
             {user ? (
               <div className="relative">
                 <button
@@ -946,6 +969,19 @@ function Navbar() {
                       className="block w-full rounded-lg px-3 py-2 text-left text-sm text-petrol-dark hover:bg-bg"
                     >
                       Mi perfil
+                    </Link>
+                    <Link
+                      role="menuitem"
+                      to="/mensajes"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="block w-full rounded-lg px-3 py-2 text-left text-sm text-petrol-dark hover:bg-bg"
+                    >
+                      Mensajes
+                      {unreadMessageCount > 0 && (
+                        <span className="ml-2 rounded-full bg-orange px-1.5 py-0.5 text-[10px] font-bold text-white">
+                          {unreadMessageCount > 9 ? "9+" : unreadMessageCount}
+                        </span>
+                      )}
                     </Link>
                     <Link
                       role="menuitem"
@@ -1139,6 +1175,18 @@ function Navbar() {
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <Link
+                    to="/mensajes"
+                    onClick={() => setMobileOpen(false)}
+                    className="col-span-2 rounded-lg bg-white px-2 py-2 text-center text-xs font-semibold text-petrol"
+                  >
+                    Mensajes
+                    {unreadMessageCount > 0 && (
+                      <span className="ml-1 rounded-full bg-orange px-1.5 py-0.5 text-[10px] font-bold text-white">
+                        {unreadMessageCount > 9 ? "9+" : unreadMessageCount}
+                      </span>
+                    )}
+                  </Link>
+                  <Link
                     to="/mis-publicaciones"
                     onClick={() => setMobileOpen(false)}
                     className="col-span-2 rounded-lg bg-white px-2 py-2 text-center text-xs font-semibold text-petrol"
@@ -1184,6 +1232,7 @@ function Navbar() {
               </div>
             )}
             <div className="flex items-center gap-3 px-3">
+              <NotificationBell />
               {!user && (
                 <div className="flex flex-1 gap-2">
                   <Link
