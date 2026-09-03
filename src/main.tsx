@@ -49,6 +49,9 @@ import SalvageYardProfilePage from "./pages/SalvageYardProfilePage"
 import MessagesPage from "./pages/MessagesPage"
 
 import ConversationPage from "./pages/ConversationPage"
+import AdminReportsPage from "./pages/admin/AdminReportsPage"
+import AdminReportDetailPage from "./pages/admin/AdminReportDetailPage"
+import AdminRoute from "./components/auth/AdminRoute"
 import NonHomeLayout from "./components/layout/NonHomeLayout"
 
 import "./index.css"
@@ -61,6 +64,22 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Routes>
             <Route path="/" element={<App />} />
             <Route element={<NonHomeLayout />}>
+              <Route
+                path="/admin/reportes"
+                element={
+                  <AdminRoute>
+                    <AdminReportsPage />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin/reportes/:reportId"
+                element={
+                  <AdminRoute>
+                    <AdminReportDetailPage />
+                  </AdminRoute>
+                }
+              />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/registro" element={<RegisterPage />} />
               <Route

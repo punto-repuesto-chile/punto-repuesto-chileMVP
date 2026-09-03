@@ -38,6 +38,8 @@ import {
 import { useAuth } from "./context/AuthContext"
 import useUnreadConversationCount from "./hooks/useUnreadConversationCount"
 import NotificationBell from "./components/notifications/NotificationBell"
+import { getMyModerationRole } from "./services/moderationService"
+import type { ModerationRole } from "./types/moderation"
 
 import { useFavorites } from "./context/FavoritesContext"
 
@@ -630,10 +632,14 @@ export function Navbar() {
 
   const [isScrolled, setIsScrolled] = useState(false)
 
-  const { user, signOut } = useAuth()
+  const { user, signOut, isLoading: authLoading } = useAuth()
   const unreadMessageCount = useUnreadConversationCount(Boolean(user))
 
   const [ownProfile, setOwnProfile] = useState<MyPublicProfile | null>(null)
+
+  const [moderationRole, setModerationRole] = useState<ModerationRole | null>(
+    null,
+  )
 
   const [avatarLoadFailed, setAvatarLoadFailed] = useState(false)
 
@@ -683,6 +689,34 @@ export function Navbar() {
   }, [user])
 
   useEffect(() => setAvatarLoadFailed(false), [ownProfile?.avatarPath])
+
+  useEffect(() => {
+    let active = true
+    if (authLoading) {
+      return () => {
+        active = false
+      }
+    }
+    if (!user) {
+      setModerationRole(null)
+      return () => {
+        active = false
+      }
+    }
+    void getMyModerationRole()
+      .then((role) => {
+        if (active) setModerationRole(role)
+      })
+      .catch(() => {
+        if (active) setModerationRole(null)
+      })
+    return () => {
+      active = false
+    }
+  }, [authLoading, user?.id])
+
+  const canModerate =
+    moderationRole === "admin" || moderationRole === "moderator"
 
   const metadataName = user?.user_metadata.full_name
 
@@ -1016,6 +1050,16 @@ export function Navbar() {
                     >
                       Publicar producto
                     </Link>
+                    {canModerate && (
+                      <Link
+                        role="menuitem"
+                        to="/admin/reportes"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="block rounded-lg px-3 py-2 text-sm font-semibold text-petrol-dark hover:bg-bg"
+                      >
+                        Moderación
+                      </Link>
+                    )}
                     <div className="my-1 h-px bg-border" />
                     <button
                       type="button"
@@ -1214,6 +1258,15 @@ export function Navbar() {
                   >
                     Mi desarmaduría
                   </Link>
+                  {canModerate && (
+                    <Link
+                      to="/admin/reportes"
+                      onClick={() => setMobileOpen(false)}
+                      className="col-span-2 rounded-lg bg-white px-2 py-2 text-center text-xs font-semibold text-petrol"
+                    >
+                      Moderación
+                    </Link>
+                  )}
                   <button
                     type="button"
                     onClick={handleLogout}
