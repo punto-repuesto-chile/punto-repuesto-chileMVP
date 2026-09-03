@@ -45,8 +45,11 @@ import RegisterSalvageYardPage from "./pages/RegisterSalvageYardPage"
 import SalvageYardsPage from "./pages/SalvageYardsPage"
 
 import SalvageYardProfilePage from "./pages/SalvageYardProfilePage"
+
 import MessagesPage from "./pages/MessagesPage"
+
 import ConversationPage from "./pages/ConversationPage"
+import NonHomeLayout from "./components/layout/NonHomeLayout"
 
 import "./index.css"
 
@@ -57,104 +60,109 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <FavoritesProvider>
           <Routes>
             <Route path="/" element={<App />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/registro" element={<RegisterPage />} />
-            <Route
-              path="/recuperar-password"
-              element={<RecoverPasswordPage />}
-            />
-            <Route
-              path="/actualizar-password"
-              element={<UpdatePasswordPage />}
-            />
-            <Route
-              path="/registrar-desarmaduria"
-              element={
-                <ProtectedRoute>
-                  <RegisterSalvageYardPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/mi-desarmaduria"
-              element={
-                <ProtectedRoute>
-                  <MySalvageYardPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/publicacion/:id" element={<ListingDetailPage />} />
-            <Route
-              path="/mensajes"
-              element={
-                <ProtectedRoute>
-                  <MessagesPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/mensajes/:conversationId"
-              element={
-                <ProtectedRoute>
-                  <ConversationPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/vendedor/:sellerId" element={<SellerProfilePage />} />
-            <Route path="/buscar" element={<SearchListingsPage />} />
-            <Route path="/desarmadurias" element={<SalvageYardsPage />} />
-            <Route
-              path="/desarmaduria/:id"
-              element={<SalvageYardProfilePage />}
-            />
-            <Route
-              path="/mi-perfil"
-              element={
-                <ProtectedRoute>
-                  <MyProfilePage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/favoritos"
-              element={
-                <ProtectedRoute>
-                  <FavoritesPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/publicacion/:id/editar"
-              element={
-                <ProtectedRoute>
-                  <EditListingPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/publicar"
-              element={
-                <ProtectedRoute>
-                  <PublishProductPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/mis-publicaciones"
-              element={
-                <ProtectedRoute>
-                  <MyListingsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/mis-tratos"
-              element={
-                <ProtectedRoute>
-                  <MyReviewInteractionsPage />
-                </ProtectedRoute>
-              }
-            />
+            <Route element={<NonHomeLayout />}>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/registro" element={<RegisterPage />} />
+              <Route
+                path="/recuperar-password"
+                element={<RecoverPasswordPage />}
+              />
+              <Route
+                path="/actualizar-password"
+                element={<UpdatePasswordPage />}
+              />
+              <Route
+                path="/registrar-desarmaduria"
+                element={
+                  <ProtectedRoute>
+                    <RegisterSalvageYardPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/mi-desarmaduria"
+                element={
+                  <ProtectedRoute>
+                    <MySalvageYardPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="/publicacion/:id" element={<ListingDetailPage />} />
+              <Route
+                path="/mensajes"
+                element={
+                  <ProtectedRoute>
+                    <MessagesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/mensajes/:conversationId"
+                element={
+                  <ProtectedRoute>
+                    <ConversationPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/vendedor/:sellerId"
+                element={<SellerProfilePage />}
+              />
+              <Route path="/buscar" element={<SearchListingsPage />} />
+              <Route path="/desarmadurias" element={<SalvageYardsPage />} />
+              <Route
+                path="/desarmaduria/:id"
+                element={<SalvageYardProfilePage />}
+              />
+              <Route
+                path="/mi-perfil"
+                element={
+                  <ProtectedRoute>
+                    <MyProfilePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/favoritos"
+                element={
+                  <ProtectedRoute>
+                    <FavoritesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/publicacion/:id/editar"
+                element={
+                  <ProtectedRoute>
+                    <EditListingPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/publicar"
+                element={
+                  <ProtectedRoute>
+                    <PublishProductPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/mis-publicaciones"
+                element={
+                  <ProtectedRoute>
+                    <MyListingsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/mis-tratos"
+                element={
+                  <ProtectedRoute>
+                    <MyReviewInteractionsPage />
+                  </ProtectedRoute>
+                }
+              />
+            </Route>
             <Route path="*" element={<App />} />
           </Routes>
         </FavoritesProvider>

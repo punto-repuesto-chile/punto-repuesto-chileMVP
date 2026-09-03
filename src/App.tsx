@@ -615,7 +615,7 @@ function Badge({
 
 // ─── Navbar ───────────────────────────────────────────────────────────────────
 
-function Navbar() {
+export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
 
   const [partsMenuOpen, setPartsMenuOpen] = useState(false)
@@ -783,25 +783,27 @@ function Navbar() {
           }`}
         >
           {/* Logo */}
-          <motion.div
-            variants={fadeDown}
-            className="flex items-center gap-2 flex-shrink-0"
-          >
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{ background: "#123B4A" }}
+          <Link to="/" aria-label="Volver al inicio">
+            <motion.div
+              variants={fadeDown}
+              className="flex items-center gap-2 flex-shrink-0"
             >
-              <span className="text-white text-xs font-bold">PR</span>
-            </div>
-            <span
-              className="font-bold text-base leading-tight"
-              style={{ fontFamily: "Manrope, sans-serif", color: "#102A36" }}
-            >
-              Punto Repuesto
-              <br />
-              <span style={{ color: "#F97316" }}>Chile</span>
-            </span>
-          </motion.div>
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ background: "#123B4A" }}
+              >
+                <span className="text-white text-xs font-bold">PR</span>
+              </div>
+              <span
+                className="font-bold text-base leading-tight"
+                style={{ fontFamily: "Manrope, sans-serif", color: "#102A36" }}
+              >
+                Punto Repuesto
+                <br />
+                <span style={{ color: "#F97316" }}>Chile</span>
+              </span>
+            </motion.div>
+          </Link>
 
           {/* Desktop nav */}
           <motion.nav

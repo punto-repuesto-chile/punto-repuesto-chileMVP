@@ -20,6 +20,8 @@ import SellerContactCard from "../components/listings/SellerContactCard"
 
 import ReputationSection from "../components/reviews/ReputationSection"
 
+import ListingQuestionsSection from "../components/questions/ListingQuestionsSection"
+
 import ChatContactButton from "../components/listings/ChatContactButton"
 
 import {
@@ -344,6 +346,13 @@ export default function ListingDetailPage() {
                   title="Reseñas de compradores de esta publicación"
                   emptyText="No hay reseñas asociadas a esta publicación todavía."
                   className="mt-0"
+                />
+              </div>
+
+              <div className="order-7 min-w-0 lg:order-none">
+                <ListingQuestionsSection
+                  listingId={listing.id}
+                  sellerId={listing.sellerId}
                 />
               </div>
             </div>
