@@ -17,17 +17,12 @@ export default function PublishHeader({
         >
           ← Volver
         </button>
-        <Link
-          to="/"
-          className="flex items-center gap-2"
-          aria-label="Ir al inicio"
-        >
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-petrol text-xs font-bold text-white">
-            PR
-          </span>
-          <span className="hidden font-display text-sm font-bold text-petrol-dark sm:block">
-            Punto Repuesto <span className="text-orange">Chile</span>
-          </span>
+        <Link to="/" className="flex items-center" aria-label="Ir al inicio">
+          <img
+            src="/brand/logo-horizontal.png"
+            alt="Punto Repuesto Chile"
+            className="h-9 w-auto max-w-[180px] object-contain"
+          />
         </Link>
         <span className="rounded-full bg-orange/10 px-3 py-1.5 text-xs font-bold text-orange-dark">
           {label}

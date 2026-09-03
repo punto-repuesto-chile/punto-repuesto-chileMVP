@@ -26,13 +26,12 @@ export default function SiteFooter() {
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.35fr_0.8fr_1.1fr_1fr] lg:gap-12">
           <div>
-            <Link to="/" className="inline-flex items-center gap-3">
-              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange text-sm font-extrabold">
-                PR
-              </span>
-              <span className="font-display text-lg font-bold">
-                Punto Repuesto Chile
-              </span>
+            <Link to="/" className="inline-flex items-center">
+              <img
+                src="/brand/logo-white.png"
+                alt="Punto Repuesto Chile"
+                className="h-16 w-auto max-w-[330px] object-contain"
+              />
             </Link>
             <p className="mt-4 max-w-sm text-sm leading-6 text-white/60">
               El punto de encuentro para comprar y vender repuestos, accesorios

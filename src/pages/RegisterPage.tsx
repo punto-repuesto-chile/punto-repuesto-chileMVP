@@ -8,15 +8,14 @@ export default function RegisterPage() {
         <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full border-[55px] border-white/5" />
         <Link
           to="/"
-          className="relative flex items-center gap-3"
+          className="relative flex items-center"
           aria-label="Ir al inicio"
         >
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange text-sm font-extrabold">
-            PR
-          </span>
-          <span className="font-display text-lg font-bold">
-            Punto Repuesto Chile
-          </span>
+          <img
+            src="/brand/logo-white.png"
+            alt="Punto Repuesto Chile"
+            className="h-11 w-auto max-w-[230px] object-contain"
+          />
         </Link>
         <div className="relative max-w-lg">
           <p className="text-sm font-bold uppercase tracking-[0.2em] text-orange">

@@ -786,22 +786,13 @@ export function Navbar() {
           <Link to="/" aria-label="Volver al inicio">
             <motion.div
               variants={fadeDown}
-              className="flex items-center gap-2 flex-shrink-0"
+              className="flex flex-shrink-0 items-center"
             >
-              <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ background: "#123B4A" }}
-              >
-                <span className="text-white text-xs font-bold">PR</span>
-              </div>
-              <span
-                className="font-bold text-base leading-tight"
-                style={{ fontFamily: "Manrope, sans-serif", color: "#102A36" }}
-              >
-                Punto Repuesto
-                <br />
-                <span style={{ color: "#F97316" }}>Chile</span>
-              </span>
+              <img
+                src="/brand/logo-horizontal.png"
+                alt="Punto Repuesto Chile"
+                className="h-11 w-auto max-w-[210px] object-contain sm:h-[3.75rem] sm:max-w-[310px]"
+              />
             </motion.div>
           </Link>
 
@@ -2643,21 +2634,12 @@ function Footer() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-10">
           {/* Brand */}
           <div className="lg:col-span-1">
-            <div className="flex items-center gap-2 mb-4">
-              <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ background: "#F97316" }}
-              >
-                <span className="text-white text-xs font-bold">PR</span>
-              </div>
-              <span
-                className="font-bold text-sm text-white"
-                style={{ fontFamily: "Manrope, sans-serif" }}
-              >
-                Punto Repuesto
-                <br />
-                Chile
-              </span>
+            <div className="mb-4 flex items-center">
+              <img
+                src="/brand/logo-white.png"
+                alt="Punto Repuesto Chile"
+                className="h-16 w-auto max-w-[330px] object-contain"
+              />
             </div>
             <p
               className="text-xs leading-relaxed mb-5"

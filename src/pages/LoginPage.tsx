@@ -15,15 +15,14 @@ export default function LoginPage() {
         <div className="absolute -bottom-32 -left-20 h-96 w-96 rounded-full bg-orange/10" />
         <Link
           to="/"
-          className="relative flex items-center gap-3"
+          className="relative flex items-center"
           aria-label="Ir al inicio"
         >
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange text-sm font-extrabold">
-            PR
-          </span>
-          <span className="font-display text-lg font-bold">
-            Punto Repuesto Chile
-          </span>
+          <img
+            src="/brand/logo-white.png"
+            alt="Punto Repuesto Chile"
+            className="h-11 w-auto max-w-[230px] object-contain"
+          />
         </Link>
         <div className="relative max-w-xl py-16">
           <p className="text-sm font-bold uppercase tracking-[0.2em] text-orange">
@@ -60,15 +59,14 @@ export default function LoginPage() {
           <div className="mb-7 flex items-center justify-between lg:hidden">
             <Link
               to="/"
-              className="flex items-center gap-2"
+              className="flex items-center"
               aria-label="Ir al inicio"
             >
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-petrol text-xs font-bold text-white">
-                PR
-              </span>
-              <span className="font-display text-sm font-bold text-petrol-dark">
-                Punto Repuesto <span className="text-orange">Chile</span>
-              </span>
+              <img
+                src="/brand/logo-horizontal.png"
+                alt="Punto Repuesto Chile"
+                className="h-9 w-auto max-w-[180px] object-contain"
+              />
             </Link>
             <Link
               to="/"
