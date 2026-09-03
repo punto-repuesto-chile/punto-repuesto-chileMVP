@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 
 import { Link, useParams } from "react-router-dom"
+import { useAuth } from "../context/AuthContext"
 
 import SiteFooter from "../components/layout/SiteFooter"
 
@@ -21,6 +22,7 @@ import SellerContactCard from "../components/listings/SellerContactCard"
 import ReputationSection from "../components/reviews/ReputationSection"
 
 import ListingQuestionsSection from "../components/questions/ListingQuestionsSection"
+import ReportContentDialog from "../components/reports/ReportContentDialog"
 
 import ChatContactButton from "../components/listings/ChatContactButton"
 
@@ -43,6 +45,7 @@ import type { PublicReview, ReputationSummary } from "../types/review"
 
 export default function ListingDetailPage() {
   const { id = "" } = useParams<{ id: string }>()
+  const { user } = useAuth()
 
   const [listing, setListing] = useState<PublishedListing | null>(null)
 
@@ -303,6 +306,14 @@ export default function ListingDetailPage() {
                   listingId={listing.id}
                   className="absolute right-3 top-3 z-20 sm:right-4 sm:top-4"
                 />
+                <div className="absolute right-14 top-3 z-20 sm:right-16 sm:top-4">
+                  <ReportContentDialog
+                    targetType="listing"
+                    targetId={listing.id}
+                    title="Reportar publicación"
+                    disabled={user?.id === listing.sellerId}
+                  />
+                </div>
                 <ListingGallery
                   images={listing.images}
                   title={listing.title}
