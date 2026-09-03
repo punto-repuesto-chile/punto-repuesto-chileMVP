@@ -3,6 +3,7 @@ import { useState } from "react"
 import type { PublicReview } from "../../types/review"
 
 import { getProfileAvatarPublicUrl } from "../../services/profileService"
+import ReportContentDialog from "../reports/ReportContentDialog"
 
 import StarRating from "./StarRating"
 
@@ -20,6 +21,7 @@ type ReviewsListProps = {
   onEdit?: (review: PublicReview) => void
 
   onDelete?: (review: PublicReview) => void
+
   emptyText?: string
 }
 
@@ -47,6 +49,7 @@ export default function ReviewsList({
   onEdit,
 
   onDelete,
+
   emptyText = "Aún no hay reseñas.",
 }: ReviewsListProps) {
   const [openMenu, setOpenMenu] = useState<string | null>(null)
@@ -103,48 +106,56 @@ export default function ReviewsList({
                 </p>
               </div>
             </div>
-            {onEdit &&
-              onDelete &&
-              ownReviews.some((own) => own.id === review.id) && (
-                <div className="relative">
-                  <button
-                    type="button"
-                    aria-label="Acciones de reseña"
-                    onClick={() =>
-                      setOpenMenu(openMenu === review.id ? null : review.id)
-                    }
-                    className="rounded-lg px-2 py-1 text-lg text-muted hover:bg-bg"
-                  >
-                    ⋯
-                  </button>
-                  {openMenu === review.id && (
-                    <div className="absolute right-0 top-9 z-10 w-36 rounded-xl border border-border bg-white p-1 shadow-lg">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setOpenMenu(null)
+            <div className="flex items-center gap-1">
+              <ReportContentDialog
+                targetType="review"
+                targetId={review.id}
+                title="Reportar reseña"
+                disabled={ownReviews.some((own) => own.id === review.id)}
+              />
+              {onEdit &&
+                onDelete &&
+                ownReviews.some((own) => own.id === review.id) && (
+                  <div className="relative">
+                    <button
+                      type="button"
+                      aria-label="Acciones de reseña"
+                      onClick={() =>
+                        setOpenMenu(openMenu === review.id ? null : review.id)
+                      }
+                      className="rounded-lg px-2 py-1 text-lg text-muted hover:bg-bg"
+                    >
+                      ⋯
+                    </button>
+                    {openMenu === review.id && (
+                      <div className="absolute right-0 top-9 z-10 w-36 rounded-xl border border-border bg-white p-1 shadow-lg">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOpenMenu(null)
 
-                          onEdit(review)
-                        }}
-                        className="block w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-petrol-dark hover:bg-bg"
-                      >
-                        Editar reseña
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setOpenMenu(null)
+                            onEdit(review)
+                          }}
+                          className="block w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-petrol-dark hover:bg-bg"
+                        >
+                          Editar reseña
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOpenMenu(null)
 
-                          onDelete(review)
-                        }}
-                        className="block w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-red-600 hover:bg-red-50"
-                      >
-                        Eliminar reseña
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
+                            onDelete(review)
+                          }}
+                          className="block w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-red-600 hover:bg-red-50"
+                        >
+                          Eliminar reseña
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+            </div>
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <StarRating

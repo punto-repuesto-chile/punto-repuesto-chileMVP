@@ -1,13 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react"
+
 import { useLocation, useNavigate } from "react-router-dom"
+
 import { useAuth } from "../../context/AuthContext"
+
 import {
   answerListingQuestion,
   createListingQuestion,
   getListingQuestions,
 } from "../../services/listingQuestionService"
+
 import { getProfileAvatarPublicUrl } from "../../services/profileService"
+
 import { getSalvageYardLogoPublicUrl } from "../../services/salvageYardService"
+import ReportContentDialog from "../reports/ReportContentDialog"
 import type {
   ListingQuestion,
   ListingQuestionAnswererIdentityType,
@@ -17,18 +23,24 @@ const PAGE_SIZE = 10
 
 function formatDate(value: string): string {
   const date = new Date(value)
+
   const diffInSeconds = Math.max(
     0,
+
     Math.floor((Date.now() - date.getTime()) / 1000),
   )
 
   if (diffInSeconds < 60) return "hace un momento"
+
   if (diffInSeconds < 3600) return `hace ${Math.floor(diffInSeconds / 60)} min`
+
   if (diffInSeconds < 86400) return `hace ${Math.floor(diffInSeconds / 3600)} h`
 
   return new Intl.DateTimeFormat("es-CL", {
     day: "numeric",
+
     month: "short",
+
     year:
       date.getFullYear() === new Date().getFullYear() ? undefined : "numeric",
   }).format(date)
@@ -36,9 +48,11 @@ function formatDate(value: string): string {
 
 function publicAvatarUrl(
   path: string | null,
+
   identityType: ListingQuestionAnswererIdentityType | null = "profile",
 ): string | null {
   if (!path) return null
+
   return identityType === "salvage_yard"
     ? getSalvageYardLogoPublicUrl(path)
     : getProfileAvatarPublicUrl(path)
@@ -46,14 +60,19 @@ function publicAvatarUrl(
 
 function Avatar({
   name,
+
   path,
+
   identityType,
 }: {
   name: string
+
   path: string | null
+
   identityType?: ListingQuestionAnswererIdentityType | null
 }) {
   const imageUrl = publicAvatarUrl(path, identityType)
+
   const initial = name.trim().slice(0, 1).toUpperCase() || "?"
 
   return imageUrl ? (
@@ -74,31 +93,51 @@ function Avatar({
 
 type ListingQuestionsSectionProps = {
   listingId: string
+
   sellerId: string
 }
 
 export default function ListingQuestionsSection({
   listingId,
+
   sellerId,
 }: ListingQuestionsSectionProps) {
   const { user, isLoading: isAuthLoading } = useAuth()
+
   const location = useLocation()
+
   const navigate = useNavigate()
+
   const [questions, setQuestions] = useState<ListingQuestion[]>([])
+
   const [totalCount, setTotalCount] = useState(0)
+
   const [isLoading, setIsLoading] = useState(true)
+
   const [isLoadingMore, setIsLoadingMore] = useState(false)
+
   const [loadError, setLoadError] = useState<string | null>(null)
+
   const [questionText, setQuestionText] = useState("")
+
   const [questionError, setQuestionError] = useState<string | null>(null)
+
   const [questionFeedback, setQuestionFeedback] = useState<string | null>(null)
+
   const [isSubmittingQuestion, setIsSubmittingQuestion] = useState(false)
+
   const [answeringId, setAnsweringId] = useState<string | null>(null)
+
   const [answerText, setAnswerText] = useState("")
+
   const [answerError, setAnswerError] = useState<string | null>(null)
+
   const [isSubmittingAnswer, setIsSubmittingAnswer] = useState(false)
+
   const [highlightedId, setHighlightedId] = useState<string | null>(null)
+
   const answerInputRef = useRef<HTMLTextAreaElement>(null)
+
   const sectionRef = useRef<HTMLElement>(null)
 
   const isOwner = Boolean(user && user.id === sellerId)
@@ -108,23 +147,29 @@ export default function ListingQuestionsSection({
       if (append) setIsLoadingMore(true)
       else {
         setIsLoading(true)
+
         setLoadError(null)
       }
 
       try {
         const result = await getListingQuestions(listingId, {
           limit: PAGE_SIZE,
+
           offset: append ? questions.length : 0,
         })
 
         setQuestions((current) => {
           if (!append) return result.questions
+
           const existingIds = new Set(current.map((item) => item.id))
+
           return [
             ...current,
+
             ...result.questions.filter((item) => !existingIds.has(item.id)),
           ]
         })
+
         setTotalCount(result.totalCount)
       } catch (error) {
         if (!append) setLoadError("No pudimos cargar las preguntas.")
@@ -134,12 +179,15 @@ export default function ListingQuestionsSection({
         else setIsLoading(false)
       }
     },
+
     [listingId, questions.length],
   )
 
   useEffect(() => {
     setQuestions([])
+
     setTotalCount(0)
+
     void loadQuestions()
   }, [listingId])
 
@@ -149,47 +197,66 @@ export default function ListingQuestionsSection({
     }
 
     window.addEventListener("focus", refreshOnFocus)
+
     document.addEventListener("visibilitychange", refreshOnFocus)
+
     return () => {
       window.removeEventListener("focus", refreshOnFocus)
+
       document.removeEventListener("visibilitychange", refreshOnFocus)
     }
   }, [loadQuestions])
 
   useEffect(() => {
     if (location.hash !== "#preguntas") return
+
     const frame = window.requestAnimationFrame(() => {
       sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
     })
+
     return () => window.cancelAnimationFrame(frame)
   }, [location.hash, isLoading])
 
   useEffect(() => {
     const questionId = new URLSearchParams(location.search).get("question")
+
     if (!questionId || !questions.some((item) => item.id === questionId)) return
+
     setHighlightedId(questionId)
+
     const timeout = window.setTimeout(() => setHighlightedId(null), 3500)
+
     return () => window.clearTimeout(timeout)
   }, [location.search, questions])
 
   const submitQuestion = async () => {
     const normalized = questionText.trim()
+
     if (!normalized) {
       setQuestionError("Escribe una pregunta antes de enviarla.")
+
       return
     }
+
     if (normalized.length < 5 || normalized.length > 1000) {
       setQuestionError("La pregunta debe tener entre 5 y 1000 caracteres.")
+
       return
     }
 
     setIsSubmittingQuestion(true)
+
     setQuestionError(null)
+
     setQuestionFeedback(null)
+
     try {
       await createListingQuestion(listingId, normalized)
+
       setQuestionText("")
+
       setQuestionFeedback("Pregunta publicada.")
+
       await loadQuestions()
     } catch (error) {
       setQuestionError(
@@ -204,22 +271,32 @@ export default function ListingQuestionsSection({
 
   const submitAnswer = async () => {
     if (!answeringId) return
+
     const normalized = answerText.trim()
+
     if (!normalized) {
       setAnswerError("La respuesta no puede estar vacía.")
+
       return
     }
+
     if (normalized.length > 2000) {
       setAnswerError("La respuesta no puede superar los 2000 caracteres.")
+
       return
     }
 
     setIsSubmittingAnswer(true)
+
     setAnswerError(null)
+
     try {
       await answerListingQuestion(answeringId, normalized)
+
       setAnsweringId(null)
+
       setAnswerText("")
+
       await loadQuestions()
     } catch (error) {
       setAnswerError(
@@ -269,6 +346,7 @@ export default function ListingQuestionsSection({
               <form
                 onSubmit={(event) => {
                   event.preventDefault()
+
                   void submitQuestion()
                 }}
               >
@@ -284,6 +362,7 @@ export default function ListingQuestionsSection({
                   maxLength={1000}
                   onChange={(event) => {
                     setQuestionText(event.target.value)
+
                     setQuestionError(null)
                   }}
                   placeholder="¿Qué quieres saber sobre este producto?"
@@ -383,7 +462,9 @@ export default function ListingQuestionsSection({
           <div className="mt-6 space-y-4">
             {questions.map((item) => {
               const isAnswerEditorOpen = answeringId === item.id
+
               const isHighlighted = highlightedId === item.id
+
               return (
                 <article
                   key={item.id}
@@ -391,7 +472,7 @@ export default function ListingQuestionsSection({
                     isHighlighted
                       ? "border-orange bg-orange/5 ring-2 ring-orange/20"
                       : "border-border bg-white"
-                  }`}
+                  } relative`}
                 >
                   <div className="flex items-start gap-3">
                     <Avatar
@@ -411,6 +492,12 @@ export default function ListingQuestionsSection({
                         {item.question}
                       </p>
                     </div>
+                    <ReportContentDialog
+                      targetType="listing_question"
+                      targetId={item.id}
+                      targetPart="question"
+                      title="Reportar pregunta"
+                    />
                   </div>
 
                   {item.answer ? (
@@ -437,6 +524,12 @@ export default function ListingQuestionsSection({
                             {item.answer}
                           </p>
                         </div>
+                        <ReportContentDialog
+                          targetType="listing_question"
+                          targetId={item.id}
+                          targetPart="answer"
+                          title="Reportar respuesta"
+                        />
                       </div>
                     </div>
                   ) : isOwner ? (
@@ -456,6 +549,7 @@ export default function ListingQuestionsSection({
                             maxLength={2000}
                             onChange={(event) => {
                               setAnswerText(event.target.value)
+
                               setAnswerError(null)
                             }}
                             rows={3}
@@ -476,7 +570,9 @@ export default function ListingQuestionsSection({
                                 type="button"
                                 onClick={() => {
                                   setAnsweringId(null)
+
                                   setAnswerText("")
+
                                   setAnswerError(null)
                                 }}
                                 className="rounded-xl border border-border px-4 py-2.5 text-sm font-bold text-muted hover:bg-bg"
@@ -514,10 +610,14 @@ export default function ListingQuestionsSection({
                             type="button"
                             onClick={() => {
                               setAnsweringId(item.id)
+
                               setAnswerText("")
+
                               setAnswerError(null)
+
                               window.setTimeout(
                                 () => answerInputRef.current?.focus(),
+
                                 0,
                               )
                             }}
