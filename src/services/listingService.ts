@@ -59,6 +59,12 @@ export type MyListing = {
   salvageYardId: string | null
 
   originName: string
+
+  moderationHidden: boolean
+
+  moderationHiddenAt: string | null
+
+  moderationReason: string | null
 }
 
 export type ListingCondition = "new" | "used" | "refurbished"
@@ -209,6 +215,29 @@ type MyListingRow = {
   salvage_yard_id: string | null
 
   listing_images: MyListingImageRow[] | null
+}
+
+type MyListingModerationRow = {
+  listing_id: string
+  moderation_hidden: boolean
+  hidden_at: string | null
+  public_reason: string | null
+}
+
+async function getMyListingModerationStates(): Promise<Map<string, MyListingModerationRow>> {
+  const { data, error } = await supabase.rpc("get_my_listing_moderation_states")
+
+  if (error)
+    throw new ListingsQueryError(
+      "No pudimos cargar el estado de moderación de tus publicaciones.",
+    )
+
+  return new Map(
+    ((data ?? []) as MyListingModerationRow[]).map((row) => [
+      row.listing_id,
+      row,
+    ]),
+  )
 }
 
 export type CreateListingInput = {
@@ -393,12 +422,16 @@ export async function getMyListings(): Promise<MyListing[]> {
 
   const rows = (data ?? []) as unknown as MyListingRow[]
 
+  const moderationByListing = await getMyListingModerationStates()
+
   const salvageYard = rows.some((row) => row.salvage_yard_id)
     ? await getMySalvageYard()
     : null
 
   return rows.map((row) => {
     const primaryImage = row.listing_images?.find((image) => image.is_primary)
+
+    const moderation = moderationByListing.get(row.id)
 
     return {
       id: row.id,
@@ -431,6 +464,12 @@ export async function getMyListings(): Promise<MyListing[]> {
           : row.salvage_yard_id
             ? "Desarmaduría"
             : "Particular",
+
+      moderationHidden: moderation?.moderation_hidden ?? false,
+
+      moderationHiddenAt: moderation?.hidden_at ?? null,
+
+      moderationReason: moderation?.public_reason ?? null,
     }
   })
 }
@@ -490,7 +529,9 @@ export async function updateOwnedListingStatus(
       })
 
     throw new ListingPublicationError(
-      "No pudimos actualizar la publicación. Inténtalo nuevamente.",
+      status === "published" && error.message.includes("content_unavailable")
+        ? "No puedes publicar este aviso mientras exista una restricción de moderación."
+        : "No pudimos actualizar la publicación. Inténtalo nuevamente.",
 
       error,
     )
@@ -506,6 +547,8 @@ export async function updateOwnedListingStatus(
   const primaryImage = row.listing_images?.find((image) => image.is_primary)
 
   const salvageYard = row.salvage_yard_id ? await getMySalvageYard() : null
+
+  const moderation = (await getMyListingModerationStates()).get(row.id)
 
   return {
     id: row.id,
@@ -538,6 +581,12 @@ export async function updateOwnedListingStatus(
         : row.salvage_yard_id
           ? "Desarmaduría"
           : "Particular",
+
+    moderationHidden: moderation?.moderation_hidden ?? false,
+
+    moderationHiddenAt: moderation?.hidden_at ?? null,
+
+    moderationReason: moderation?.public_reason ?? null,
   }
 }
 
@@ -1612,7 +1661,9 @@ export async function updateOwnedListing(
       .update(
         createListingUpdateInput(
           original.formData,
+
           authData.user.id,
+
           original.salvageYardId,
         ),
       )

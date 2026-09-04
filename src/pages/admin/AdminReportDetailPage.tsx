@@ -1,10 +1,16 @@
 import { useCallback, useEffect, useState } from "react"
+
 import { Link, useNavigate, useParams } from "react-router-dom"
+
 import {
   getReport,
+  getMyModerationRole,
+  hideReportTarget,
   ModerationServiceError,
+  restoreReportTarget,
   updateReportStatus,
 } from "../../services/moderationService"
+
 import type {
   ModerationAction,
   ModerationReportDetail,
@@ -13,33 +19,45 @@ import type {
 
 const statusLabel: Record<ModerationReportStatus, string> = {
   pending: "Pendiente",
+
   in_review: "En revisión",
+
   resolved: "Resuelto",
+
   dismissed: "Descartado",
 }
 
 const actionLabel: Record<ModerationAction["action"], string> = {
   take_for_review: "Tomado para revisión",
+
   resolve: "Resuelto",
+
   dismiss: "Descartado",
+  hide_content: "Contenido ocultado",
+  restore_content: "Contenido restaurado",
 }
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat("es-CL", {
     dateStyle: "medium",
+
     timeStyle: "short",
   }).format(new Date(value))
 }
 
 function statusClass(status: ModerationReportStatus): string {
   if (status === "pending") return "bg-amber-50 text-amber-800"
+
   if (status === "in_review") return "bg-blue-50 text-blue-800"
+
   if (status === "resolved") return "bg-emerald-50 text-emerald-800"
+
   return "bg-slate-100 text-slate-700"
 }
 
 function Snapshot({ report }: { report: ModerationReportDetail }) {
   const snapshot = report.targetSnapshot
+
   if (report.targetType === "listing")
     return (
       <div className="space-y-2">
@@ -62,6 +80,7 @@ function Snapshot({ report }: { report: ModerationReportDetail }) {
         </p>
       </div>
     )
+
   if (report.targetType === "review")
     return (
       <div className="space-y-2">
@@ -81,6 +100,7 @@ function Snapshot({ report }: { report: ModerationReportDetail }) {
         </p>
       </div>
     )
+
   if (report.targetPart === "question")
     return (
       <div className="space-y-2">
@@ -94,6 +114,7 @@ function Snapshot({ report }: { report: ModerationReportDetail }) {
         </p>
       </div>
     )
+
   return (
     <div className="space-y-2">
       <p>
@@ -118,10 +139,12 @@ function CurrentTarget({ report }: { report: ModerationReportDetail }) {
         Este contenido ya no existe.
       </p>
     )
+
   if (!report.currentTarget)
     return (
       <p className="text-sm text-muted">No hay contexto actual disponible.</p>
     )
+
   return (
     <div className="space-y-2 text-sm text-petrol-dark">
       {Object.entries(report.currentTarget).map(([key, value]) => (
@@ -135,19 +158,39 @@ function CurrentTarget({ report }: { report: ModerationReportDetail }) {
 
 export default function AdminReportDetailPage() {
   const { reportId } = useParams<{ reportId: string }>()
+
   const navigate = useNavigate()
+
   const [report, setReport] = useState<ModerationReportDetail | null>(null)
+
   const [loading, setLoading] = useState(true)
+
   const [error, setError] = useState("")
+
+  const [notice, setNotice] = useState("")
+
   const [note, setNote] = useState("")
+
   const [pendingAction, setPendingAction] =
     useState<"resolved" | "dismissed" | null>(null)
+
   const [submitting, setSubmitting] = useState(false)
+
+  const [role, setRole] = useState<"moderator" | "admin" | null>(null)
+
+  const [contentAction, setContentAction] = useState<"hide" | "restore" | null>(
+    null,
+  )
 
   const loadReport = useCallback(async () => {
     if (!reportId) return
+
     setLoading(true)
+
     setError("")
+
+    setNotice("")
+
     try {
       setReport(await getReport(reportId))
     } catch (caughtError) {
@@ -165,21 +208,50 @@ export default function AdminReportDetailPage() {
     void loadReport()
   }, [loadReport])
 
+  useEffect(() => {
+    void getMyModerationRole()
+      .then(setRole)
+      .catch(() => setRole(null))
+  }, [])
+
+  useEffect(() => {
+    if (!pendingAction && !contentAction) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setPendingAction(null)
+        setContentAction(null)
+      }
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [contentAction, pendingAction])
+
   async function performAction(
     nextStatus: "in_review" | "resolved" | "dismissed",
   ) {
     if (!report || submitting) return
+
     setSubmitting(true)
+
     setError("")
+
+    setNotice("")
+
     try {
       await updateReportStatus({
         reportId: report.id,
+
         expectedStatus: report.status,
+
         status: nextStatus,
+
         note: note.trim() || null,
       })
+
       setNote("")
+
       setPendingAction(null)
+
       await loadReport()
     } catch (caughtError) {
       if (
@@ -189,6 +261,7 @@ export default function AdminReportDetailPage() {
         setError(
           "Este reporte fue actualizado por otro moderador. Actualizamos la información.",
         )
+
         await loadReport()
       } else
         setError(
@@ -196,6 +269,60 @@ export default function AdminReportDetailPage() {
             ? caughtError.message
             : "No pudimos actualizar el reporte.",
         )
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function performContentAction(action: "hide" | "restore") {
+    if (!report || submitting || !report.targetExists) return
+
+    setSubmitting(true)
+    setError("")
+
+    try {
+      if (action === "hide") {
+        await hideReportTarget({
+          reportId: report.id,
+          expectedReportStatus: report.status as "pending" | "in_review",
+          expectedModerationVersion: report.moderationVersion,
+          note: note.trim() || null,
+        })
+        setNotice("Contenido ocultado y reporte resuelto.")
+      } else {
+        await restoreReportTarget({
+          reportId: report.id,
+          expectedModerationVersion: report.moderationVersion,
+          note: note.trim() || null,
+        })
+        setNotice("Ocultamiento retirado.")
+      }
+      setNote("")
+      setContentAction(null)
+      await loadReport()
+    } catch (caughtError) {
+      if (caughtError instanceof ModerationServiceError) {
+        const conflictKinds = new Set([
+          "content_already_hidden",
+          "content_not_hidden",
+          "stale_state",
+          "report_status_conflict",
+          "conflict",
+          "content_deleted",
+          "content_unavailable",
+        ])
+        if (conflictKinds.has(caughtError.kind)) {
+          setError(
+            caughtError.kind === "content_already_hidden"
+              ? "Este contenido ya fue ocultado por otro moderador."
+              : caughtError.kind === "stale_state" ||
+                  caughtError.kind === "conflict"
+                ? "El estado de moderación cambió. Actualizamos la información."
+                : caughtError.message,
+          )
+          await loadReport()
+        } else setError(caughtError.message)
+      } else setError("No pudimos completar la acción de moderación.")
     } finally {
       setSubmitting(false)
     }
@@ -209,6 +336,7 @@ export default function AdminReportDetailPage() {
         </p>
       </main>
     )
+
   if (!report)
     return (
       <main className="min-h-[calc(100vh-4rem)] bg-bg px-4 py-10">
@@ -236,6 +364,14 @@ export default function AdminReportDetailPage() {
     )
 
   const canAct = report.status === "pending" || report.status === "in_review"
+
+  const contentHidden = report.moderationState === "hidden"
+
+  const canHide =
+    Boolean(role) && report.targetExists && canAct && !contentHidden
+
+  const canRestore = role === "admin" && report.targetExists && contentHidden
+
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-bg px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-5xl">
@@ -261,6 +397,14 @@ export default function AdminReportDetailPage() {
             {statusLabel[report.status]}
           </span>
         </div>
+        {notice && (
+          <div
+            className="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-800"
+            role="status"
+          >
+            {notice}
+          </div>
+        )}
         {error && (
           <div
             className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-800"
@@ -345,13 +489,47 @@ export default function AdminReportDetailPage() {
                 <CurrentTarget report={report} />
               </div>
             </section>
+            <section className="rounded-2xl border border-border bg-white p-6 shadow-sm">
+              <h2 className="font-display text-lg font-bold text-petrol-dark">
+                Estado del contenido
+              </h2>
+              {contentHidden ? (
+                <div className="mt-4 rounded-xl border border-orange/30 bg-orange/5 p-4 text-sm text-petrol-dark">
+                  <p className="font-bold">Oculto por moderación</p>
+                  <p className="mt-1">
+                    Este contenido ya está oculto de las áreas públicas.
+                  </p>
+                  {report.moderationHiddenAt && (
+                    <p className="mt-2 text-xs text-muted">
+                      {formatDate(report.moderationHiddenAt)}
+                      {report.moderationHiddenByName &&
+                        ` · ${report.moderationHiddenByName}`}
+                    </p>
+                  )}
+                  {report.moderationOriginReportId && (
+                    <p className="mt-1 text-xs text-muted">
+                      Reporte de origen: #
+                      {report.moderationOriginReportId.slice(0, 8)}
+                    </p>
+                  )}
+                </div>
+              ) : report.targetExists ? (
+                <p className="mt-4 rounded-xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-800">
+                  Visible públicamente
+                </p>
+              ) : (
+                <p className="mt-4 rounded-xl bg-amber-50 p-4 text-sm font-semibold text-amber-800">
+                  Este contenido ya no está disponible.
+                </p>
+              )}
+            </section>
           </div>
           <aside className="space-y-6">
             <section className="rounded-2xl border border-border bg-white p-6 shadow-sm">
               <h2 className="font-display text-lg font-bold text-petrol-dark">
                 Acciones
               </h2>
-              {canAct ? (
+              {canAct || canRestore ? (
                 <>
                   <label className="mt-4 block text-sm font-semibold text-petrol-dark">
                     Nota interna (opcional)
@@ -365,7 +543,12 @@ export default function AdminReportDetailPage() {
                     />
                   </label>
                   {pendingAction ? (
-                    <div className="mt-4 rounded-xl border border-orange/30 bg-orange/5 p-4">
+                    <div
+                      className="mt-4 rounded-xl border border-orange/30 bg-orange/5 p-4"
+                      role="dialog"
+                      aria-modal="true"
+                      aria-label="Confirmar acción de moderación"
+                    >
                       <p className="text-sm font-semibold text-petrol-dark">
                         ¿Confirmas{" "}
                         {pendingAction === "resolved"
@@ -376,6 +559,7 @@ export default function AdminReportDetailPage() {
                       <div className="mt-3 flex gap-2">
                         <button
                           type="button"
+                          autoFocus
                           disabled={submitting}
                           onClick={() => void performAction(pendingAction)}
                           className="rounded-lg bg-petrol px-3 py-2 text-sm font-bold text-white disabled:opacity-50"
@@ -392,8 +576,56 @@ export default function AdminReportDetailPage() {
                         </button>
                       </div>
                     </div>
+                  ) : contentAction ? (
+                    <div className="mt-4 rounded-xl border border-orange/30 bg-orange/5 p-4">
+                      <p className="text-sm font-semibold text-petrol-dark">
+                        {contentAction === "hide"
+                          ? "Esta acción ocultará el contenido de las áreas públicas de Punto Repuesto Chile y resolverá este reporte."
+                          : "Esta acción retirará el ocultamiento administrativo. El contenido solo volverá a mostrarse si su estado actual permite publicación."}
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          disabled={submitting}
+                          onClick={() =>
+                            void performContentAction(contentAction)
+                          }
+                          className="rounded-lg bg-petrol px-3 py-2 text-sm font-bold text-white disabled:opacity-50"
+                        >
+                          {submitting ? "Procesando…" : "Confirmar"}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={submitting}
+                          onClick={() => setContentAction(null)}
+                          className="rounded-lg border border-border px-3 py-2 text-sm font-bold text-petrol"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
                   ) : (
                     <div className="mt-4 flex flex-wrap gap-2">
+                      {canHide && (
+                        <button
+                          type="button"
+                          disabled={submitting}
+                          onClick={() => setContentAction("hide")}
+                          className="rounded-xl bg-orange px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"
+                        >
+                          Ocultar contenido
+                        </button>
+                      )}
+                      {canRestore && (
+                        <button
+                          type="button"
+                          disabled={submitting}
+                          onClick={() => setContentAction("restore")}
+                          className="rounded-xl border border-petrol px-4 py-2.5 text-sm font-bold text-petrol disabled:opacity-50"
+                        >
+                          Restaurar contenido
+                        </button>
+                      )}
                       {report.status === "pending" && (
                         <button
                           type="button"
@@ -425,7 +657,8 @@ export default function AdminReportDetailPage() {
                 </>
               ) : (
                 <p className="mt-4 text-sm font-semibold text-muted">
-                  Este reporte está cerrado. No hay acciones disponibles.
+                  Este reporte está cerrado. No hay acciones de reporte
+                  disponibles.
                 </p>
               )}
             </section>
@@ -460,6 +693,13 @@ export default function AdminReportDetailPage() {
                           }
                         </p>
                       )}
+                      {action.previousContentState &&
+                        action.newContentState && (
+                          <p className="mt-1 text-xs text-muted">
+                            Contenido: {action.previousContentState} →{" "}
+                            {action.newContentState}
+                          </p>
+                        )}
                       {action.note && (
                         <p className="mt-2 whitespace-pre-wrap text-sm text-petrol-dark">
                           {action.note}
